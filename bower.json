@@ -14,5 +14,9 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "dependencies": {
+    "bookingbug-angular-core": "0.0.2",
+    "bookingbug-angular-admin": "0.0.2"
+  }
 }
