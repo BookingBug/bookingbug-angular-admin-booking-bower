@@ -170,3 +170,53 @@
   });
 
 }).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').directive('bbAdminBooking', function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http) {
+    var getTemplate, link, renderTemplate;
+    getTemplate = function(template) {
+      var fromTemplateCache, partial, src;
+      partial = template ? template : 'main';
+      fromTemplateCache = $templateCache.get(partial);
+      if (fromTemplateCache) {
+        return fromTemplateCache;
+      } else {
+        src = PathSvc.directivePartial(partial).$$unwrapTrustedValue();
+        return $http.get(src, {
+          cache: $templateCache
+        }).then(function(response) {
+          return response.data;
+        });
+      }
+    };
+    renderTemplate = function(scope, element, design_mode, template) {
+      return $q.when(getTemplate(template)).then(function(template) {
+        element.html(template).show();
+        if (design_mode) {
+          element.append('<style widget_css scoped></style>');
+        }
+        return $compile(element.contents())(scope);
+      });
+    };
+    link = function(scope, element, attrs) {
+      var config;
+      config = scope.$eval(attrs.bbAdminBooking);
+      config.admin = true;
+      if (config.company_id && !attrs.companyId) {
+        attrs.companyId = config.company_id;
+      }
+      if (!scope.company) {
+        return AdminCompanyService.query(attrs).then(function(company) {
+          scope.company = company;
+          scope.initWidget(config);
+          return renderTemplate(scope, element, config.design_mode, config.template);
+        });
+      }
+    };
+    return {
+      link: link,
+      controller: 'BBCtrl'
+    };
+  });
+
+}).call(this);
