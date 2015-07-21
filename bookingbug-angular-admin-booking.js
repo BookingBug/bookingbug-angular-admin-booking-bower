@@ -201,11 +201,16 @@
     link = function(scope, element, attrs) {
       var config;
       config = scope.$eval(attrs.bbAdminBooking);
+      config || (config = {});
       config.admin = true;
-      if (config.company_id && !attrs.companyId) {
-        attrs.companyId = config.company_id;
+      if (!attrs.companyId) {
+        if (config.company_id) {
+          attrs.companyId = config.company_id;
+        } else if (scope.company) {
+          attrs.companyId = scope.company.id;
+        }
       }
-      if (!scope.company) {
+      if (attrs.companyId) {
         return AdminCompanyService.query(attrs).then(function(company) {
           scope.company = company;
           scope.initWidget(config);
@@ -216,6 +221,56 @@
     return {
       link: link,
       controller: 'BBCtrl'
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').directive('bbAdminBookingPopup', function(AdminBookingPopup) {
+    var controller, link;
+    controller = function($scope) {
+      return $scope.open = function() {
+        return AdminBookingPopup.open();
+      };
+    };
+    link = function(scope, element, attrs) {
+      return element.bind('click', function() {
+        return scope.open();
+      });
+    };
+    return {
+      link: link,
+      controller: controller
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
+    return {
+      open: function(config) {
+        return $modal.open({
+          controller: function($scope, config) {
+            return $scope.config = angular.extend({
+              company_id: $scope.company.id,
+              item_defaults: {
+                merge_resources: true,
+                merge_people: true
+              },
+              clear_member: true,
+              template: 'main'
+            }, config);
+          },
+          templateUrl: 'admin_booking_popup.html',
+          resolve: {
+            config: function() {
+              return config;
+            }
+          }
+        });
+      }
     };
   });
 
