@@ -55,35 +55,6 @@
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
-    return {
-      open: function(config) {
-        return $modal.open({
-          controller: function($scope, config) {
-            return $scope.config = angular.extend({
-              company_id: $scope.company.id,
-              item_defaults: {
-                merge_resources: true,
-                merge_people: true
-              },
-              clear_member: true,
-              template: 'main'
-            }, config);
-          },
-          templateUrl: 'admin_booking_popup.html',
-          resolve: {
-            config: function() {
-              return config;
-            }
-          }
-        });
-      }
-    };
-  });
-
-}).call(this);
-
-(function() {
   'use strict';
   angular.module('BBAdminBooking').directive('bbAdminBookingClients', function() {
     return {
@@ -271,6 +242,35 @@
     return {
       link: link,
       controller: controller
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
+    return {
+      open: function(config) {
+        return $modal.open({
+          controller: function($scope, config) {
+            return $scope.config = angular.extend({
+              company_id: $scope.company.id,
+              item_defaults: {
+                merge_resources: true,
+                merge_people: true
+              },
+              clear_member: true,
+              template: 'main'
+            }, config);
+          },
+          templateUrl: 'admin_booking_popup.html',
+          resolve: {
+            config: function() {
+              return config;
+            }
+          }
+        });
+      }
     };
   });
 
