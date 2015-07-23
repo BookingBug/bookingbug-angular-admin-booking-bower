@@ -252,8 +252,8 @@
     return {
       open: function(config) {
         return $modal.open({
-          controller: function($scope, config) {
-            return $scope.config = angular.extend({
+          controller: function($scope, $modalInstance, config) {
+            $scope.config = angular.extend({
               company_id: $scope.company.id,
               item_defaults: {
                 merge_resources: true,
@@ -262,8 +262,12 @@
               clear_member: true,
               template: 'main'
             }, config);
+            return $scope.cancel = function() {
+              return $modalInstance.dismiss('cancel');
+            };
           },
           templateUrl: 'admin_booking_popup.html',
+          scope: $scope,
           resolve: {
             config: function() {
               return config;
