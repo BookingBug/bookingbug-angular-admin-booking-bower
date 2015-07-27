@@ -252,6 +252,7 @@
     return {
       open: function(config) {
         return $modal.open({
+          size: config.size || 'lg',
           controller: function($scope, $modalInstance, config) {
             $scope.config = angular.extend({
               company_id: $scope.company.id,
@@ -267,7 +268,6 @@
             };
           },
           templateUrl: 'admin_booking_popup.html',
-          scope: $scope,
           resolve: {
             config: function() {
               return config;
