@@ -252,7 +252,7 @@
     return {
       open: function(config) {
         return $modal.open({
-          size: config.size || 'lg',
+          size: config ? config.size : 'lg',
           controller: function($scope, $modalInstance, config) {
             $scope.config = angular.extend({
               company_id: $scope.company.id,
