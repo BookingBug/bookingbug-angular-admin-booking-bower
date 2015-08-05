@@ -254,15 +254,22 @@
         return $modal.open({
           size: config ? config.size : 'lg',
           controller: function($scope, $modalInstance, config) {
+            var base;
+            if ($scope.bb && $scope.bb.current_item) {
+              delete $scope.bb.current_item;
+            }
             $scope.config = angular.extend({
-              company_id: $scope.company.id,
-              item_defaults: {
-                merge_resources: true,
-                merge_people: true
-              },
               clear_member: true,
               template: 'main'
             }, config);
+            if ($scope.company) {
+              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
+            }
+            $scope.config.item_defaults = angular.extend({
+              merge_resources: true,
+              merge_people: false
+            }, config.item_defaults);
+            console.log($scope.config);
             return $scope.cancel = function() {
               return $modalInstance.dismiss('cancel');
             };
