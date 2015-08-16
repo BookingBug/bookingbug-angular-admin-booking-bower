@@ -269,7 +269,6 @@
               merge_resources: true,
               merge_people: false
             }, config.item_defaults);
-            console.log($scope.config);
             return $scope.cancel = function() {
               return $modalInstance.dismiss('cancel');
             };
