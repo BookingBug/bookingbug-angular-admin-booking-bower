@@ -26,6 +26,35 @@
 }).call(this);
 
 (function() {
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
+
+  window.Collection.Client = (function(superClass) {
+    extend(Client, superClass);
+
+    function Client() {
+      return Client.__super__.constructor.apply(this, arguments);
+    }
+
+    Client.prototype.checkItem = function(item) {
+      return Client.__super__.checkItem.apply(this, arguments);
+    };
+
+    return Client;
+
+  })(window.Collection.Base);
+
+  angular.module('BB.Services').provider("ClientCollections", function() {
+    return {
+      $get: function() {
+        return new window.BaseCollections();
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
   'use strict';
   angular.module('BBAdminBooking').directive('bbAdminBookingClients', function() {
     return {
@@ -143,74 +172,6 @@
 }).call(this);
 
 (function() {
-  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty;
-
-  window.Collection.Client = (function(superClass) {
-    extend(Client, superClass);
-
-    function Client() {
-      return Client.__super__.constructor.apply(this, arguments);
-    }
-
-    Client.prototype.checkItem = function(item) {
-      return Client.__super__.checkItem.apply(this, arguments);
-    };
-
-    return Client;
-
-  })(window.Collection.Base);
-
-  angular.module('BB.Services').provider("ClientCollections", function() {
-    return {
-      $get: function() {
-        return new window.BaseCollections();
-      }
-    };
-  });
-
-}).call(this);
-
-(function() {
-  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
-    return {
-      open: function(config) {
-        return $modal.open({
-          size: config ? config.size : 'lg',
-          controller: function($scope, $modalInstance, config) {
-            var base;
-            if ($scope.bb && $scope.bb.current_item) {
-              delete $scope.bb.current_item;
-            }
-            $scope.config = angular.extend({
-              clear_member: true,
-              template: 'main'
-            }, config);
-            if ($scope.company) {
-              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
-            }
-            $scope.config.item_defaults = angular.extend({
-              merge_resources: true,
-              merge_people: false
-            }, config.item_defaults);
-            return $scope.cancel = function() {
-              return $modalInstance.dismiss('cancel');
-            };
-          },
-          templateUrl: 'admin_booking_popup.html',
-          resolve: {
-            config: function() {
-              return config;
-            }
-          }
-        });
-      }
-    };
-  });
-
-}).call(this);
-
-(function() {
   angular.module('BBAdminBooking').directive('bbAdminBooking', function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http) {
     var getTemplate, link, renderTemplate;
     getTemplate = function(template) {
@@ -281,6 +242,45 @@
     return {
       link: link,
       controller: controller
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
+    return {
+      open: function(config) {
+        return $modal.open({
+          size: config ? config.size : 'lg',
+          controller: function($scope, $modalInstance, config) {
+            var base;
+            if ($scope.bb && $scope.bb.current_item) {
+              delete $scope.bb.current_item;
+            }
+            $scope.config = angular.extend({
+              clear_member: true,
+              template: 'main'
+            }, config);
+            if ($scope.company) {
+              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
+            }
+            $scope.config.item_defaults = angular.extend({
+              merge_resources: true,
+              merge_people: false
+            }, config.item_defaults);
+            return $scope.cancel = function() {
+              return $modalInstance.dismiss('cancel');
+            };
+          },
+          templateUrl: 'admin_booking_popup.html',
+          resolve: {
+            config: function() {
+              return config;
+            }
+          }
+        });
+      }
     };
   });
 
