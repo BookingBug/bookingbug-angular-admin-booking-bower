@@ -138,7 +138,7 @@
       params = {
         company: $scope.bb.company,
         per_page: $scope.per_page,
-        filter_by: $scope.search_text,
+        filter_by: filterBy != null ? filterBy : $scope.search_text,
         filter_by_fields: filterByFields,
         order_by: orderBy,
         order_by_reverse: orderByReverse
