@@ -26,6 +26,35 @@
 }).call(this);
 
 (function() {
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
+
+  window.Collection.Client = (function(superClass) {
+    extend(Client, superClass);
+
+    function Client() {
+      return Client.__super__.constructor.apply(this, arguments);
+    }
+
+    Client.prototype.checkItem = function(item) {
+      return Client.__super__.checkItem.apply(this, arguments);
+    };
+
+    return Client;
+
+  })(window.Collection.Base);
+
+  angular.module('BB.Services').provider("ClientCollections", function() {
+    return {
+      $get: function() {
+        return new window.BaseCollections();
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
   'use strict';
   angular.module('BBAdminBooking').directive('bbAdminBookingClients', function() {
     return {
@@ -36,20 +65,21 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService) {
     $scope.validator = ValidatorService;
     $scope.clientDef = $q.defer();
     $scope.clientPromise = $scope.clientDef.promise;
     $scope.per_page = 20;
     $scope.total_entries = 0;
     $scope.clients = [];
-    $scope.searchClients = false;
+    $scope.search_clients = false;
     $scope.newClient = false;
     $scope.no_clients = false;
     $scope.search_error = false;
+    $scope.search_text = null;
     $scope.showSearch = (function(_this) {
       return function() {
-        $scope.searchClients = true;
+        $scope.search_clients = true;
         return $scope.newClient = false;
       };
     })(this);
@@ -57,7 +87,7 @@
       return function() {
         $scope.search_error = false;
         $scope.no_clients = false;
-        $scope.searchClients = false;
+        $scope.search_clients = false;
         $scope.newClient = true;
         return $scope.clearClient();
       };
@@ -72,8 +102,8 @@
       };
     })(this);
     $scope.checkSearch = (function(_this) {
-      return function(search) {
-        if (search.length >= 3) {
+      return function() {
+        if ($scope.search_text && $scope.search_text.length >= 3) {
           $scope.search_error = false;
           return true;
         } else {
@@ -108,7 +138,7 @@
       params = {
         company: $scope.bb.company,
         per_page: $scope.per_page,
-        filter_by: filterBy,
+        filter_by: filterBy != null ? filterBy : $scope.search_text,
         filter_by_fields: filterByFields,
         order_by: orderBy,
         order_by_reverse: orderByReverse
@@ -137,35 +167,6 @@
     };
     return $scope.edit = function(item) {
       return console.log(item);
-    };
-  });
-
-}).call(this);
-
-(function() {
-  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty;
-
-  window.Collection.Client = (function(superClass) {
-    extend(Client, superClass);
-
-    function Client() {
-      return Client.__super__.constructor.apply(this, arguments);
-    }
-
-    Client.prototype.checkItem = function(item) {
-      return Client.__super__.checkItem.apply(this, arguments);
-    };
-
-    return Client;
-
-  })(window.Collection.Base);
-
-  angular.module('BB.Services').provider("ClientCollections", function() {
-    return {
-      $get: function() {
-        return new window.BaseCollections();
-      }
     };
   });
 
