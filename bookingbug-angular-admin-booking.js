@@ -65,7 +65,7 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService) {
     $scope.validator = ValidatorService;
     $scope.clientDef = $q.defer();
     $scope.clientPromise = $scope.clientDef.promise;
@@ -166,7 +166,7 @@
       });
     };
     return $scope.edit = function(item) {
-      return $log.info("not implemented");
+      return console.log(item);
     };
   });
 
