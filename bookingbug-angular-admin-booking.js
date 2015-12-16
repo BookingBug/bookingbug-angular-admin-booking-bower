@@ -65,7 +65,7 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log) {
     $scope.validator = ValidatorService;
     $scope.clientDef = $q.defer();
     $scope.clientPromise = $scope.clientDef.promise;
@@ -166,46 +166,7 @@
       });
     };
     return $scope.edit = function(item) {
-      return console.log(item);
-    };
-  });
-
-}).call(this);
-
-(function() {
-  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
-    return {
-      open: function(config) {
-        return $modal.open({
-          size: config ? config.size : 'lg',
-          controller: function($scope, $modalInstance, config) {
-            var base;
-            if ($scope.bb && $scope.bb.current_item) {
-              delete $scope.bb.current_item;
-            }
-            $scope.config = angular.extend({
-              clear_member: true,
-              template: 'main'
-            }, config);
-            if ($scope.company) {
-              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
-            }
-            $scope.config.item_defaults = angular.extend({
-              merge_resources: true,
-              merge_people: false
-            }, config.item_defaults);
-            return $scope.cancel = function() {
-              return $modalInstance.dismiss('cancel');
-            };
-          },
-          templateUrl: 'admin_booking_popup.html',
-          resolve: {
-            config: function() {
-              return config;
-            }
-          }
-        });
-      }
+      return $log.info("not implemented");
     };
   });
 
@@ -282,6 +243,45 @@
     return {
       link: link,
       controller: controller
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
+    return {
+      open: function(config) {
+        return $modal.open({
+          size: config ? config.size : 'lg',
+          controller: function($scope, $modalInstance, config) {
+            var base;
+            if ($scope.bb && $scope.bb.current_item) {
+              delete $scope.bb.current_item;
+            }
+            $scope.config = angular.extend({
+              clear_member: true,
+              template: 'main'
+            }, config);
+            if ($scope.company) {
+              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
+            }
+            $scope.config.item_defaults = angular.extend({
+              merge_resources: true,
+              merge_people: false
+            }, config.item_defaults);
+            return $scope.cancel = function() {
+              return $modalInstance.dismiss('cancel');
+            };
+          },
+          templateUrl: 'admin_booking_popup.html',
+          resolve: {
+            config: function() {
+              return config;
+            }
+          }
+        });
+      }
     };
   });
 
