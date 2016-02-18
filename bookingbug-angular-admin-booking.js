@@ -165,6 +165,21 @@
         });
       });
     };
+    $scope.searchClients = function(search_text) {
+      var clientDef, params;
+      clientDef = $q.defer();
+      params = {
+        filter_by: search_text,
+        company: $scope.bb.company
+      };
+      AdminClientService.query(params).then((function(_this) {
+        return function(clients) {
+          clientDef.resolve(clients.items);
+          return clients.items;
+        };
+      })(this));
+      return clientDef.promise;
+    };
     return $scope.edit = function(item) {
       return $log.info("not implemented");
     };
