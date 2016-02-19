@@ -180,6 +180,13 @@
       })(this));
       return clientDef.promise;
     };
+    $scope.typeHeadResults = function($item, $model, $label) {
+      var item, label, model;
+      item = $item;
+      model = $model;
+      label = $label;
+      $scope.client = item;
+    };
     return $scope.edit = function(item) {
       return $log.info("not implemented");
     };
