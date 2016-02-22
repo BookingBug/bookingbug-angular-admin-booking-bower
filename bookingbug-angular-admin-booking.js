@@ -65,7 +65,7 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log, PaginationService) {
     $scope.validator = ValidatorService;
     $scope.clientDef = $q.defer();
     $scope.clientPromise = $scope.clientDef.promise;
@@ -77,6 +77,10 @@
     $scope.no_clients = false;
     $scope.search_error = false;
     $scope.search_text = null;
+    $scope.pagination = PaginationService.initialise({
+      page_size: 10,
+      max_size: 5
+    });
     $scope.showSearch = (function(_this) {
       return function() {
         $scope.search_clients = true;
@@ -132,6 +136,7 @@
     $scope.getClients = function(currentPage, filterBy, filterByFields, orderBy, orderByReverse) {
       var clientDef, params;
       AlertService.clear();
+      $scope.search_triggered = true;
       $scope.no_clients = false;
       $scope.search_error = false;
       clientDef = $q.defer();
@@ -146,27 +151,88 @@
       if (currentPage) {
         params.page = currentPage + 1;
       }
-      return $rootScope.connection_started.then(function() {
-        $scope.notLoaded($scope);
-        if (!$rootScope.bb.api_url && $scope.bb.api_url) {
-          $rootScope.bb.api_url = $scope.bb.api_url;
-        }
-        return AdminClientService.query(params).then((function(_this) {
-          return function(clients) {
-            $scope.clients = clients.items;
-            $scope.setLoaded($scope);
-            $scope.setPageLoaded();
-            $scope.total_entries = clients.total_entries;
-            return clientDef.resolve(clients.items);
-          };
-        })(this), function(err) {
-          $scope.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
-          return clientDef.reject(err);
-        });
-      });
+      $scope.notLoaded($scope);
+      if (!$rootScope.bb.api_url && $scope.bb.api_url) {
+        $rootScope.bb.api_url = $scope.bb.api_url;
+      }
+      return AdminClientService.query(params).then((function(_this) {
+        return function(clients) {
+          $scope.clients = clients.items;
+          $scope.setLoaded($scope);
+          $scope.setPageLoaded();
+          $scope.total_entries = clients.total_entries;
+          PaginationService.update($scope.pagination, $scope.clients.length);
+          return clientDef.resolve(clients.items);
+        };
+      })(this));
+    };
+    $scope.searchClients = function(search_text) {
+      var clientDef, params;
+      clientDef = $q.defer();
+      params = {
+        filter_by: search_text,
+        company: $scope.bb.company
+      };
+      AdminClientService.query(params).then((function(_this) {
+        return function(clients) {
+          clientDef.resolve(clients.items);
+          return clients.items;
+        };
+      })(this));
+      return clientDef.promise;
+    };
+    $scope.typeHeadResults = function($item, $model, $label) {
+      var item, label, model;
+      item = $item;
+      model = $model;
+      label = $label;
+      $scope.client = item;
+    };
+    $scope.clearSearch = function() {
+      $scope.clients = null;
+      return $scope.search_triggered = false;
     };
     return $scope.edit = function(item) {
       return $log.info("not implemented");
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
+    return {
+      open: function(config) {
+        return $modal.open({
+          size: config ? config.size : 'lg',
+          controller: function($scope, $modalInstance, config) {
+            var base;
+            if ($scope.bb && $scope.bb.current_item) {
+              delete $scope.bb.current_item;
+            }
+            $scope.config = angular.extend({
+              clear_member: true,
+              template: 'main'
+            }, config);
+            if ($scope.company) {
+              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
+            }
+            $scope.config.item_defaults = angular.extend({
+              merge_resources: true,
+              merge_people: false
+            }, config.item_defaults);
+            return $scope.cancel = function() {
+              return $modalInstance.dismiss('cancel');
+            };
+          },
+          templateUrl: 'admin_booking_popup.html',
+          resolve: {
+            config: function() {
+              return config;
+            }
+          }
+        });
+      }
     };
   });
 
@@ -243,45 +309,6 @@
     return {
       link: link,
       controller: controller
-    };
-  });
-
-}).call(this);
-
-(function() {
-  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
-    return {
-      open: function(config) {
-        return $modal.open({
-          size: config ? config.size : 'lg',
-          controller: function($scope, $modalInstance, config) {
-            var base;
-            if ($scope.bb && $scope.bb.current_item) {
-              delete $scope.bb.current_item;
-            }
-            $scope.config = angular.extend({
-              clear_member: true,
-              template: 'main'
-            }, config);
-            if ($scope.company) {
-              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
-            }
-            $scope.config.item_defaults = angular.extend({
-              merge_resources: true,
-              merge_people: false
-            }, config.item_defaults);
-            return $scope.cancel = function() {
-              return $modalInstance.dismiss('cancel');
-            };
-          },
-          templateUrl: 'admin_booking_popup.html',
-          resolve: {
-            config: function() {
-              return config;
-            }
-          }
-        });
-      }
     };
   });
 
