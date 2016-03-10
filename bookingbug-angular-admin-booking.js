@@ -26,11 +26,11 @@
 }).call(this);
 
 (function() {
-  var __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __hasProp = {}.hasOwnProperty;
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
 
-  window.Collection.Client = (function(_super) {
-    __extends(Client, _super);
+  window.Collection.Client = (function(superClass) {
+    extend(Client, superClass);
 
     function Client() {
       return Client.__super__.constructor.apply(this, arguments);
@@ -282,7 +282,7 @@
         return $modal.open({
           size: config ? config.size : 'lg',
           controller: function($scope, $modalInstance, config) {
-            var _base;
+            var base;
             if ($scope.bb && $scope.bb.current_item) {
               delete $scope.bb.current_item;
             }
@@ -291,7 +291,7 @@
               template: 'main'
             }, config);
             if ($scope.company) {
-              (_base = $scope.config).company_id || (_base.company_id = $scope.company.id);
+              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
             }
             $scope.config.item_defaults = angular.extend({
               merge_resources: true,
