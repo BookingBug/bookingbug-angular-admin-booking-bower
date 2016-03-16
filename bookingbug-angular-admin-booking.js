@@ -280,7 +280,7 @@
     return {
       open: function(config) {
         return $modal.open({
-          size: config ? config.size : 'lg',
+          size: 'lg',
           controller: function($scope, $modalInstance, config) {
             var base;
             if ($scope.bb && $scope.bb.current_item) {
