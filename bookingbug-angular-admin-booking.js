@@ -56,6 +56,48 @@
 
 (function() {
   'use strict';
+  angular.module('BB.Directives').directive('calendarAdmin', function() {
+    return {
+      restrict: 'AE',
+      replace: true,
+      scope: true,
+      controller: 'calendarAdminCtrl'
+    };
+  });
+
+  angular.module('BB.Controllers').controller('calendarAdminCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel) {
+    $scope.adult_count = 0;
+    $scope.show_child_qty = false;
+    $scope.show_price = false;
+    angular.extend(this, $controller('TimeList', {
+      $scope: $scope,
+      $attrs: $attrs,
+      $element: $element
+    }));
+    $scope.week_view = true;
+    $scope.name_switch = "switch to week view";
+    $scope.switchWeekView = function() {
+      if ($scope.week_view) {
+        $scope.week_view = false;
+        return $scope.name_switch = "switch to day view";
+      } else {
+        $scope.week_view = true;
+        return $scope.name_switch = "switch to week view";
+      }
+    };
+    return $scope.bookAnyway = function() {
+      $scope.new_timeslot = new BBModel.TimeSlot({
+        time: $scope.current_item.defaults.time,
+        avail: 1
+      });
+      return $scope.selectSlot($scope.new_timeslot);
+    };
+  });
+
+}).call(this);
+
+(function() {
+  'use strict';
   angular.module('BBAdminBooking').directive('bbAdminBookingClients', function() {
     return {
       restrict: 'AE',
