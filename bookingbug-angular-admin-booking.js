@@ -318,6 +318,20 @@
 }).call(this);
 
 (function() {
+  angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
+    return {
+      scope: true,
+      restrict: 'A',
+      templateUrl: function(element, attrs) {
+        return PathSvc.directivePartial("_datetime_picker");
+      },
+      controller: function($scope, $element, $attrs, $rootScope) {}
+    };
+  });
+
+}).call(this);
+
+(function() {
   angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
     return {
       open: function(config) {

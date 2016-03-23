@@ -146,3 +146,6 @@
 .admin-typehead .dropdown-menu {
   max-height: 500px;
   overflow: auto; }
+
+.bb-date-picker [timepicker] {
+  margin-top: -32px; }
