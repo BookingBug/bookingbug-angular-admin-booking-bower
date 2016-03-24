@@ -318,9 +318,32 @@
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
+  angular.module('BBAdminBooking').directive('bbBlockTime', function() {
     return {
       scope: true,
+      restrict: 'A',
+      controller: function($scope, $element, $attrs, AdminPersonService, uiCalendarConfig) {
+        return $scope.blockTime = function() {
+          return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
+            start_time: $scope.config.from_datetime,
+            end_time: $scope.config.to_datetime
+          }).then(function(response) {
+            uiCalendarConfig.calendars.resourceCalendar.fullCalendar('refetchEvents');
+            return $scope.cancel();
+          });
+        };
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
+    return {
+      scope: {
+        date: '='
+      },
       restrict: 'A',
       templateUrl: function(element, attrs) {
         return PathSvc.directivePartial("_datetime_picker");
