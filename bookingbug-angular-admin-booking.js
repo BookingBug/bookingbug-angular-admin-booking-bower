@@ -323,6 +323,52 @@
       scope: true,
       restrict: 'A',
       controller: function($scope, $element, $attrs, AdminPersonService, uiCalendarConfig) {
+        $scope.resources = [];
+        if ($scope.bb.current_item.company.$has('people')) {
+          $scope.bb.current_item.company.getPeoplePromise().then(function(people) {
+            var i, len, p;
+            for (i = 0, len = people.length; i < len; i++) {
+              p = people[i];
+              p.title = p.name;
+              p.identifier = p.id + '_p';
+              p.group = 'Staff';
+            }
+            return $scope.resources = _.union($scope.resources, people);
+          });
+        }
+        if ($scope.bb.current_item.company.$has('resources')) {
+          $scope.bb.current_item.company.getResourcesPromise().then(function(resources) {
+            var i, len, r;
+            for (i = 0, len = resources.length; i < len; i++) {
+              r = resources[i];
+              r.title = r.name;
+              r.identifier = r.id + '_r';
+              r.group = 'Resources ';
+            }
+            return $scope.resources = _.union($scope.resources, resources);
+          });
+        }
+        if (($scope.bb.current_item.person != null) && ($scope.bb.current_item.person.id != null)) {
+          $scope.picked_resource = $scope.bb.current_item.person.id + '_p';
+        }
+        if (($scope.bb.current_item.resource != null) && ($scope.bb.current_item.resource.id != null)) {
+          $scope.picked_resource = $scope.bb.current_item.resource.id + '_r';
+        }
+        $scope.changeResource = function() {
+          var parts;
+          if ($scope.picked_resource != null) {
+            parts = $scope.picked_resource.split('_');
+            return angular.forEach($scope.resources, function(value, key) {
+              if (value.identifier === $scope.picked_resource) {
+                if (parts[1] === 'p') {
+                  $scope.bb.current_item.person = value;
+                } else if (parts[1] === 'r') {
+                  $scope.bb.current_item.resource = value;
+                }
+              }
+            });
+          }
+        };
         return $scope.blockTime = function() {
           return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
             start_time: $scope.config.from_datetime,
