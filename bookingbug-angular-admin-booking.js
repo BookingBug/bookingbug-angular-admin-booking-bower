@@ -74,7 +74,7 @@
       $attrs: $attrs,
       $element: $element
     }));
-    $scope.week_view = true;
+    $scope.week_view = false;
     $scope.name_switch = "switch to week view";
     $scope.switchWeekView = function() {
       if ($scope.week_view) {
