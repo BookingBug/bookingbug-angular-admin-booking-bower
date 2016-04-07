@@ -56,48 +56,6 @@
 
 (function() {
   'use strict';
-  angular.module('BB.Directives').directive('calendarAdmin', function() {
-    return {
-      restrict: 'AE',
-      replace: true,
-      scope: true,
-      controller: 'calendarAdminCtrl'
-    };
-  });
-
-  angular.module('BB.Controllers').controller('calendarAdminCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel) {
-    $scope.adult_count = 0;
-    $scope.show_child_qty = false;
-    $scope.show_price = false;
-    angular.extend(this, $controller('TimeList', {
-      $scope: $scope,
-      $attrs: $attrs,
-      $element: $element
-    }));
-    $scope.week_view = false;
-    $scope.name_switch = "switch to week view";
-    $scope.switchWeekView = function() {
-      if ($scope.week_view) {
-        $scope.week_view = false;
-        return $scope.name_switch = "switch to day view";
-      } else {
-        $scope.week_view = true;
-        return $scope.name_switch = "switch to week view";
-      }
-    };
-    return $scope.bookAnyway = function() {
-      $scope.new_timeslot = new BBModel.TimeSlot({
-        time: $scope.current_item.defaults.time,
-        avail: 1
-      });
-      return $scope.selectSlot($scope.new_timeslot);
-    };
-  });
-
-}).call(this);
-
-(function() {
-  'use strict';
   angular.module('BBAdminBooking').directive('bbAdminBookingClients', function() {
     return {
       restrict: 'AE',
@@ -107,7 +65,7 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log, PaginationService) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log) {
     $scope.validator = ValidatorService;
     $scope.clientDef = $q.defer();
     $scope.clientPromise = $scope.clientDef.promise;
@@ -119,10 +77,6 @@
     $scope.no_clients = false;
     $scope.search_error = false;
     $scope.search_text = null;
-    $scope.pagination = PaginationService.initialise({
-      page_size: 10,
-      max_size: 5
-    });
     $scope.showSearch = (function(_this) {
       return function() {
         $scope.search_clients = true;
@@ -178,7 +132,6 @@
     $scope.getClients = function(currentPage, filterBy, filterByFields, orderBy, orderByReverse) {
       var clientDef, params;
       AlertService.clear();
-      $scope.search_triggered = true;
       $scope.no_clients = false;
       $scope.search_error = false;
       clientDef = $q.defer();
@@ -193,46 +146,24 @@
       if (currentPage) {
         params.page = currentPage + 1;
       }
-      $scope.notLoaded($scope);
-      if (!$rootScope.bb.api_url && $scope.bb.api_url) {
-        $rootScope.bb.api_url = $scope.bb.api_url;
-      }
-      return AdminClientService.query(params).then((function(_this) {
-        return function(clients) {
-          $scope.clients = clients.items;
-          $scope.setLoaded($scope);
-          $scope.setPageLoaded();
-          $scope.total_entries = clients.total_entries;
-          PaginationService.update($scope.pagination, $scope.clients.length);
-          return clientDef.resolve(clients.items);
-        };
-      })(this));
-    };
-    $scope.searchClients = function(search_text) {
-      var clientDef, params;
-      clientDef = $q.defer();
-      params = {
-        filter_by: search_text,
-        company: $scope.bb.company
-      };
-      AdminClientService.query(params).then((function(_this) {
-        return function(clients) {
-          clientDef.resolve(clients.items);
-          return clients.items;
-        };
-      })(this));
-      return clientDef.promise;
-    };
-    $scope.typeHeadResults = function($item, $model, $label) {
-      var item, label, model;
-      item = $item;
-      model = $model;
-      label = $label;
-      $scope.client = item;
-    };
-    $scope.clearSearch = function() {
-      $scope.clients = null;
-      return $scope.search_triggered = false;
+      return $rootScope.connection_started.then(function() {
+        $scope.notLoaded($scope);
+        if (!$rootScope.bb.api_url && $scope.bb.api_url) {
+          $rootScope.bb.api_url = $scope.bb.api_url;
+        }
+        return AdminClientService.query(params).then((function(_this) {
+          return function(clients) {
+            $scope.clients = clients.items;
+            $scope.setLoaded($scope);
+            $scope.setPageLoaded();
+            $scope.total_entries = clients.total_entries;
+            return clientDef.resolve(clients.items);
+          };
+        })(this), function(err) {
+          $scope.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
+          return clientDef.reject(err);
+        });
+      });
     };
     return $scope.edit = function(item) {
       return $log.info("not implemented");
@@ -318,94 +249,11 @@
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbBlockTime', function() {
-    return {
-      scope: true,
-      restrict: 'A',
-      controller: function($scope, $element, $attrs, AdminPersonService, uiCalendarConfig) {
-        $scope.resources = [];
-        if ($scope.bb.current_item.company.$has('people')) {
-          $scope.bb.current_item.company.getPeoplePromise().then(function(people) {
-            var i, len, p;
-            for (i = 0, len = people.length; i < len; i++) {
-              p = people[i];
-              p.title = p.name;
-              p.identifier = p.id + '_p';
-              p.group = 'Staff';
-            }
-            return $scope.resources = _.union($scope.resources, people);
-          });
-        }
-        if ($scope.bb.current_item.company.$has('resources')) {
-          $scope.bb.current_item.company.getResourcesPromise().then(function(resources) {
-            var i, len, r;
-            for (i = 0, len = resources.length; i < len; i++) {
-              r = resources[i];
-              r.title = r.name;
-              r.identifier = r.id + '_r';
-              r.group = 'Resources ';
-            }
-            return $scope.resources = _.union($scope.resources, resources);
-          });
-        }
-        if (($scope.bb.current_item.person != null) && ($scope.bb.current_item.person.id != null)) {
-          $scope.picked_resource = $scope.bb.current_item.person.id + '_p';
-        }
-        if (($scope.bb.current_item.resource != null) && ($scope.bb.current_item.resource.id != null)) {
-          $scope.picked_resource = $scope.bb.current_item.resource.id + '_r';
-        }
-        $scope.changeResource = function() {
-          var parts;
-          if ($scope.picked_resource != null) {
-            parts = $scope.picked_resource.split('_');
-            return angular.forEach($scope.resources, function(value, key) {
-              if (value.identifier === $scope.picked_resource) {
-                if (parts[1] === 'p') {
-                  $scope.bb.current_item.person = value;
-                } else if (parts[1] === 'r') {
-                  $scope.bb.current_item.resource = value;
-                }
-              }
-            });
-          }
-        };
-        return $scope.blockTime = function() {
-          return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
-            start_time: $scope.config.from_datetime,
-            end_time: $scope.config.to_datetime
-          }).then(function(response) {
-            uiCalendarConfig.calendars.resourceCalendar.fullCalendar('refetchEvents');
-            return $scope.cancel();
-          });
-        };
-      }
-    };
-  });
-
-}).call(this);
-
-(function() {
-  angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
-    return {
-      scope: {
-        date: '='
-      },
-      restrict: 'A',
-      templateUrl: function(element, attrs) {
-        return PathSvc.directivePartial("_datetime_picker");
-      },
-      controller: function($scope, $element, $attrs, $rootScope) {}
-    };
-  });
-
-}).call(this);
-
-(function() {
   angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
     return {
       open: function(config) {
         return $modal.open({
-          size: 'lg',
+          size: config ? config.size : 'lg',
           controller: function($scope, $modalInstance, config) {
             var base;
             if ($scope.bb && $scope.bb.current_item) {
