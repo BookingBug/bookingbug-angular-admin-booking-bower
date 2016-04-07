@@ -384,17 +384,56 @@
 
 }).call(this);
 
+
+/***
+* @ngdoc directive
+* @name BBAdminBooking.directive:bbDateTimePicker
+* @scope
+* @restrict A
+*
+* @description
+* DateTime picker that combines date & timepicker and consolidates 
+* the Use of Moment.js in the App and Date in the pickers 
+*
+* @param {object}  date   A moment.js date object
+* @param {boolean}  showMeridian   Switch to show/hide meridian
+* @param {number}  minuteStep Step for the timepicker (optional, default:10)
+ */
+
 (function() {
   angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
     return {
       scope: {
-        date: '='
+        date: '=',
+        showMeridian: '=',
+        minuteStep: '=?'
       },
       restrict: 'A',
       templateUrl: function(element, attrs) {
         return PathSvc.directivePartial("_datetime_picker");
       },
-      controller: function($scope, $element, $attrs, $rootScope) {}
+      controller: function($scope, $filter, $timeout) {
+        if (!$scope.minuteStep || typeof $scope.minuteStep === 'undefined') {
+          $scope.minuteStep = 10;
+        }
+        $scope.$watch('datetimeWithNoTz', function(newValue, oldValue) {
+          var assembledDate;
+          newValue = new Date(newValue);
+          if ((newValue != null) && moment(newValue).isValid()) {
+            assembledDate = moment();
+            assembledDate.set({
+              'year': parseInt(newValue.getFullYear()),
+              'month': parseInt(newValue.getMonth()),
+              'date': parseInt(newValue.getDate()),
+              'hour': parseInt(newValue.getHours()),
+              'minute': parseInt(newValue.getMinutes()),
+              'second': 0
+            });
+            $scope.date = assembledDate.format();
+          }
+        });
+        return $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
+      }
     };
   });
 
