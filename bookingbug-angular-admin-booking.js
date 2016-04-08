@@ -26,6 +26,35 @@
 }).call(this);
 
 (function() {
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
+
+  window.Collection.Client = (function(superClass) {
+    extend(Client, superClass);
+
+    function Client() {
+      return Client.__super__.constructor.apply(this, arguments);
+    }
+
+    Client.prototype.checkItem = function(item) {
+      return Client.__super__.checkItem.apply(this, arguments);
+    };
+
+    return Client;
+
+  })(window.Collection.Base);
+
+  angular.module('BB.Services').provider("ClientCollections", function() {
+    return {
+      $get: function() {
+        return new window.BaseCollections();
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
   'use strict';
   angular.module('BB.Directives').directive('calendarAdmin', function() {
     return {
@@ -355,45 +384,58 @@
 
 }).call(this);
 
+
+/***
+* @ngdoc directive
+* @name BBAdminBooking.directive:bbDateTimePicker
+* @scope
+* @restrict A
+*
+* @description
+* DateTime picker that combines date & timepicker and consolidates 
+* the Use of Moment.js in the App and Date in the pickers 
+*
+* @param {object}  date   A moment.js date object
+* @param {boolean}  showMeridian   Switch to show/hide meridian (optional, default:false)
+* @param {number}  minuteStep Step for the timepicker (optional, default:10)
+ */
+
 (function() {
   angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
     return {
       scope: {
-        date: '='
+        date: '=',
+        showMeridian: '=?',
+        minuteStep: '=?'
       },
       restrict: 'A',
       templateUrl: function(element, attrs) {
         return PathSvc.directivePartial("_datetime_picker");
       },
-      controller: function($scope, $element, $attrs, $rootScope) {}
-    };
-  });
-
-}).call(this);
-
-(function() {
-  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty;
-
-  window.Collection.Client = (function(superClass) {
-    extend(Client, superClass);
-
-    function Client() {
-      return Client.__super__.constructor.apply(this, arguments);
-    }
-
-    Client.prototype.checkItem = function(item) {
-      return Client.__super__.checkItem.apply(this, arguments);
-    };
-
-    return Client;
-
-  })(window.Collection.Base);
-
-  angular.module('BB.Services').provider("ClientCollections", function() {
-    return {
-      $get: function() {
-        return new window.BaseCollections();
+      controller: function($scope, $filter, $timeout, GeneralOptions) {
+        if (!$scope.minuteStep || typeof $scope.minuteStep === 'undefined') {
+          $scope.minuteStep = GeneralOptions.calendar_minute_step;
+        }
+        if (!$scope.showMeridian || typeof $scope.showMeridian === 'undefined') {
+          $scope.showMeridian = GeneralOptions.twelve_hour_format;
+        }
+        $scope.$watch('datetimeWithNoTz', function(newValue, oldValue) {
+          var assembledDate;
+          newValue = new Date(newValue);
+          if ((newValue != null) && moment(newValue).isValid()) {
+            assembledDate = moment();
+            assembledDate.set({
+              'year': parseInt(newValue.getFullYear()),
+              'month': parseInt(newValue.getMonth()),
+              'date': parseInt(newValue.getDate()),
+              'hour': parseInt(newValue.getHours()),
+              'minute': parseInt(newValue.getMinutes()),
+              'second': 0
+            });
+            $scope.date = assembledDate.format();
+          }
+        });
+        return $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
       }
     };
   });
@@ -436,5 +478,53 @@
       }
     };
   });
+
+}).call(this);
+
+
+/*
+* @ngdoc service
+* @module BBAdminBooking
+* @name GeneralOptions
+*
+* @description
+* Returns a set of General configuration options
+ */
+
+
+/*
+* @ngdoc service
+* @module BBAdminBooking
+* @name GeneralOptionsProvider
+*
+* @description
+* Provider 
+*
+* @example
+  <example>
+  angular.module('ExampleModule').config ['GeneralOptionsProvider', (GeneralOptionsProvider) ->
+    GeneralOptionsProvider.setOption('twelve_hour_format', true)
+  ]
+  </example>
+ */
+
+(function() {
+  angular.module('BBAdminBooking').provider('GeneralOptions', [
+    function() {
+      var options;
+      options = {
+        twelve_hour_format: false,
+        calendar_minute_step: 10
+      };
+      this.setOption = function(option, value) {
+        if (options.hasOwnProperty(option)) {
+          options[option] = value;
+        }
+      };
+      this.$get = function() {
+        return options;
+      };
+    }
+  ]);
 
 }).call(this);
