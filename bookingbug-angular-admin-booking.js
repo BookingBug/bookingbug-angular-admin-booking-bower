@@ -448,8 +448,9 @@
       open: function(config) {
         return $modal.open({
           size: 'lg',
-          controller: function($scope, $modalInstance, config) {
+          controller: function($scope, $modalInstance, config, $window) {
             var base;
+            $scope.Math = $window.Math;
             if ($scope.bb && $scope.bb.current_item) {
               delete $scope.bb.current_item;
             }
