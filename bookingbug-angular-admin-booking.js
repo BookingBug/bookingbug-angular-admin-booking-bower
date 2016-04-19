@@ -322,7 +322,7 @@
     return {
       scope: true,
       restrict: 'A',
-      controller: function($scope, $element, $attrs, AdminPersonService, uiCalendarConfig) {
+      controller: function($scope, $element, $attrs, AdminPersonService, BBModel, BookingCollections, $rootScope) {
         var blockSuccess, isValid;
         $scope.resources = [];
         if ($scope.bb.current_item.company.$has('people')) {
@@ -380,14 +380,14 @@
               start_time: $scope.config.from_datetime,
               end_time: $scope.config.to_datetime
             }).then(function(response) {
-              return blockSuccess();
+              return blockSuccess(response);
             });
           } else if (typeof $scope.bb.current_item.resource === 'object') {
             return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.person, {
               start_time: $scope.config.from_datetime,
               end_time: $scope.config.to_datetime
             }).then(function(response) {
-              return blockSuccess();
+              return blockSuccess(response);
             });
           }
         };
@@ -401,8 +401,11 @@
           }
           return true;
         };
-        return blockSuccess = function() {
-          uiCalendarConfig.calendars.resourceCalendar.fullCalendar('refetchEvents');
+        return blockSuccess = function(response) {
+          var booking;
+          booking = new BBModel.Admin.Booking(response);
+          BookingCollections.checkItems(booking);
+          $rootScope.$broadcast('refetchBookings');
           return $scope.cancel();
         };
       }
