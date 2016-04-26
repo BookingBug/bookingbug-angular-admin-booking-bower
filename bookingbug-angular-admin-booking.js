@@ -74,7 +74,7 @@
       $attrs: $attrs,
       $element: $element
     }));
-    $scope.week_view = false;
+    $scope.week_view = true;
     $scope.name_switch = "switch to week view";
     $scope.switchWeekView = function() {
       if ($scope.week_view) {
@@ -322,7 +322,8 @@
     return {
       scope: true,
       restrict: 'A',
-      controller: function($scope, $element, $attrs, AdminPersonService, uiCalendarConfig) {
+      controller: function($scope, $element, $attrs, AdminPersonService, BBModel, BookingCollections, $rootScope) {
+        var blockSuccess, isValid;
         $scope.resources = [];
         if ($scope.bb.current_item.company.$has('people')) {
           $scope.bb.current_item.company.getPeoplePromise().then(function(people) {
@@ -357,6 +358,7 @@
         $scope.changeResource = function() {
           var parts;
           if ($scope.picked_resource != null) {
+            $scope.resourceError = false;
             parts = $scope.picked_resource.split('_');
             return angular.forEach($scope.resources, function(value, key) {
               if (value.identifier === $scope.picked_resource) {
@@ -369,14 +371,42 @@
             });
           }
         };
-        return $scope.blockTime = function() {
-          return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
-            start_time: $scope.config.from_datetime,
-            end_time: $scope.config.to_datetime
-          }).then(function(response) {
-            uiCalendarConfig.calendars.resourceCalendar.fullCalendar('refetchEvents');
-            return $scope.cancel();
-          });
+        $scope.blockTime = function() {
+          if (!isValid()) {
+            return false;
+          }
+          if (typeof $scope.bb.current_item.person === 'object') {
+            return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
+              start_time: $scope.config.from_datetime,
+              end_time: $scope.config.to_datetime
+            }).then(function(response) {
+              return blockSuccess(response);
+            });
+          } else if (typeof $scope.bb.current_item.resource === 'object') {
+            return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.person, {
+              start_time: $scope.config.from_datetime,
+              end_time: $scope.config.to_datetime
+            }).then(function(response) {
+              return blockSuccess(response);
+            });
+          }
+        };
+        isValid = function() {
+          $scope.resourceError = false;
+          if (typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') {
+            $scope.resourceError = true;
+          }
+          if ((typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') || ($scope.config.from_datetime == null) || !$scope.config.to_datetime) {
+            return false;
+          }
+          return true;
+        };
+        return blockSuccess = function(response) {
+          var booking;
+          booking = new BBModel.Admin.Booking(response);
+          BookingCollections.checkItems(booking);
+          $rootScope.$broadcast('refetchBookings');
+          return $scope.cancel();
         };
       }
     };
