@@ -56,7 +56,7 @@
 
 (function() {
   'use strict';
-  angular.module('BB.Directives').directive('bbCalendarAdmin', function() {
+  angular.module('BB.Directives').directive('calendarAdmin', function() {
     return {
       restrict: 'AE',
       replace: true,
@@ -65,53 +65,32 @@
     };
   });
 
-  angular.module('BB.Controllers').controller('calendarAdminCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel, $rootScope) {
+  angular.module('BB.Controllers').controller('calendarAdminCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel) {
+    $scope.adult_count = 0;
+    $scope.show_child_qty = false;
+    $scope.show_price = false;
     angular.extend(this, $controller('TimeList', {
       $scope: $scope,
       $attrs: $attrs,
       $element: $element
     }));
-    $scope.calendar_view = {
-      next_available: false,
-      day: false,
-      multi_day: false
-    };
-    $rootScope.connection_started.then(function() {
-      if ($scope.bb.item_defaults.pick_first_time) {
-        $scope.switchView('next_available');
-      } else if ($scope.bb.current_item.defaults.time) {
-        $scope.switchView('day');       
+    $scope.week_view = true;
+    $scope.name_switch = "switch to week view";
+    $scope.switchWeekView = function() {
+      if ($scope.week_view) {
+        $scope.week_view = false;
+        return $scope.name_switch = "switch to day view";
       } else {
-        $scope.switchView('multi_day');
+        $scope.week_view = true;
+        return $scope.name_switch = "switch to week view";
       }
-      if ($scope.bb.current_item.person) {
-        $scope.person_name = $scope.bb.current_item.person.name;
-      }
-      if ($scope.bb.current_item.resource) {
-        return $scope.resource_name = $scope.bb.current_item.resource.name;
-      }
-    });
-    $scope.switchView = function(view) {
-      var key, ref, value;
-      ref = $scope.calendar_view;
-      for (key in ref) {
-        value = ref[key];
-        $scope.calendar_view[key] = false;
-      }
-      return $scope.calendar_view[view] = true;
     };
-    return $scope.overBook = function() {
-      var new_timeslot;
-      new_timeslot = new BBModel.TimeSlot({
-        time: $scope.bb.current_item.defaults.time,
+    return $scope.bookAnyway = function() {
+      $scope.new_timeslot = new BBModel.TimeSlot({
+        time: $scope.current_item.defaults.time,
         avail: 1
       });
-      if ($scope.selected_day) {
-        $scope.setLastSelectedDate($scope.selected_day.date);
-        $scope.bb.current_item.setDate($scope.selected_day);
-      }
-      $scope.bb.current_item.setTime(new_timeslot);
-      return $scope.decideNextPage();
+      return $scope.selectSlot($scope.new_timeslot);
     };
   });
 
@@ -319,18 +298,20 @@
 
 (function() {
   angular.module('BBAdminBooking').directive('bbAdminBookingPopup', function(AdminBookingPopup) {
+    var controller, link;
+    controller = function($scope) {
+      return $scope.open = function() {
+        return AdminBookingPopup.open();
+      };
+    };
+    link = function(scope, element, attrs) {
+      return element.bind('click', function() {
+        return scope.open();
+      });
+    };
     return {
-      restrict: 'A',
-      link: function(scope, element, attrs) {
-        return element.bind('click', function() {
-          return scope.open();
-        });
-      },
-      controller: function($scope) {
-        return $scope.open = function() {
-          return AdminBookingPopup.open();
-        };
-      }
+      link: link,
+      controller: controller
     };
   });
 
@@ -447,8 +428,6 @@
 * @param {object}  date   A moment.js date object
 * @param {boolean}  showMeridian   Switch to show/hide meridian (optional, default:false)
 * @param {number}  minuteStep Step for the timepicker (optional, default:10)
-* @param {object}  date Min date value for datetimepicker
-* @param {object}  date Max date value for datetimepicker
  */
 
 (function() {
@@ -457,16 +436,13 @@
       scope: {
         date: '=',
         showMeridian: '=?',
-        minuteStep: '=?',
-        minDate: '=?',
-        maxDate: '=?'
+        minuteStep: '=?'
       },
       restrict: 'A',
       templateUrl: function(element, attrs) {
         return PathSvc.directivePartial("_datetime_picker");
       },
       controller: function($scope, $filter, $timeout, GeneralOptions) {
-        var filterDate;
         if (!$scope.minuteStep || typeof $scope.minuteStep === 'undefined') {
           $scope.minuteStep = GeneralOptions.calendar_minute_step;
         }
@@ -474,7 +450,7 @@
           $scope.showMeridian = GeneralOptions.twelve_hour_format;
         }
         $scope.$watch('datetimeWithNoTz', function(newValue, oldValue) {
-          var assembledDate, maxDateClean, minDateDate;
+          var assembledDate;
           newValue = new Date(newValue);
           if ((newValue != null) && moment(newValue).isValid()) {
             assembledDate = moment();
@@ -486,105 +462,11 @@
               'minute': parseInt(newValue.getMinutes()),
               'second': 0
             });
-            if ($scope.minDateClean != null) {
-              minDateDate = new Date($scope.minDateClean);
-              if ((newValue.getTime() / 1000) < (minDateDate.getTime() / 1000)) {
-                if (newValue.getHours() < minDateDate.getHours()) {
-                  assembledDate.hours(parseInt(minDateDate.getHours()));
-                }
-                if (newValue.getMinutes() < minDateDate.getMinutes()) {
-                  assembledDate.minutes(parseInt(minDateDate.getMinutes()));
-                }
-                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
-              }
-            }
-            if ($scope.maxDateClean != null) {
-              maxDateClean = new Date($scope.maxDateClean);
-              if ((newValue.getTime() / 1000) > (maxDateClean.getTime() / 1000)) {
-                if (newValue.getHours() > maxDateClean.getHours()) {
-                  assembledDate.hours(parseInt(maxDateClean.getHours()));
-                }
-                if (newValue.getMinutes() > maxDateClean.getMinutes()) {
-                  assembledDate.minutes(parseInt(maxDateClean.getMinutes()));
-                }
-                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
-              }
-            }
             $scope.date = assembledDate.format();
           }
         });
-        $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
-        $scope.minDateClean = null;
-        $scope.maxDateClean = null;
-        $scope.$watch('minDate', function(newValue, oldValue) {
-          if (newValue !== oldValue) {
-            return $scope.minDateClean = filterDate(newValue);
-          }
-        });
-        $scope.$watch('maxDate', function(newValue, oldValue) {
-          if (newValue !== oldValue) {
-            return $scope.maxDateClean = filterDate(newValue);
-          }
-        });
-        return filterDate = function(date) {
-          if ((date != null) && moment(date).isValid()) {
-            return $filter('clearTimezone')(moment(date).format());
-          }
-          return null;
-        };
+        return $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
       }
-    };
-  });
-
-}).call(this);
-
-(function() {
-  angular.module('BB.Filters').filter('in_the_future', function() {
-    return function(slots) {
-      var now_tod, tim;
-      tim = moment();
-      now_tod = tim.minutes() + tim.hours() * 60;
-      return _.filter(slots, function(x) {
-        return x.time > now_tod;
-      });
-    };
-  });
-
-  angular.module('BB.Filters').filter('tod_from_now', function() {
-    return function(tod, options) {
-      var hour_string, hours, min_string, mins, now_tod, seperator, str, tim, v, val;
-      tim = moment();
-      now_tod = tim.minutes() + tim.hours() * 60;
-      v = tod - now_tod;
-      hour_string = options && options.abbr_units ? "hr" : "hour";
-      min_string = options && options.abbr_units ? "min" : "minute";
-      seperator = options && angular.isString(options.seperator) ? options.seperator : "and";
-      val = parseInt(v);
-      if (val < 60) {
-        return val + " " + min_string + "s";
-      }
-      hours = parseInt(val / 60);
-      mins = val % 60;
-      if (mins === 0) {
-        if (hours === 1) {
-          return "1 " + hour_string;
-        } else {
-          return hours + " " + hour_string + "s";
-        }
-      } else {
-        str = hours + " " + hour_string;
-        if (hours > 1) {
-          str += "s";
-        }
-        if (mins === 0) {
-          return str;
-        }
-        if (seperator.length > 0) {
-          str += " " + seperator;
-        }
-        str += " " + mins + " " + min_string + "s";
-      }
-      return str;
     };
   });
 
