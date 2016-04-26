@@ -1,115 +1,62 @@
-.cal-header {
-  text-align: center;
-  margin-bottom: 13px; }
-
-.cal-subheader {
-  padding-top: 20px;
-  padding-bottom: 5px;
-  margin-top: 10px;
-  border-bottom: 1px solid #dddddd; }
-
-.section2 {
-  padding: 10px 0 0 0; }
-  .section2 .bb-section-title {
-    border-bottom: 1px solid #CCC; }
-
-.panel-header-cal-admin {
+#bb [bb-calendar-admin] .bb-day-nav {
   text-align: center; }
 
-.cal-dateheader {
-  padding-top: 5px; }
+#bb [bb-calendar-admin] .btn-day-nav {
+  color: #333; }
+  #bb [bb-calendar-admin] .btn-day-nav:hover {
+    color: #000; }
 
-.calendar-cal-admin .panel-title {
-  padding-bottom: 0px; }
+#bb [bb-calendar-admin] .bb-day-nav-heading {
+  display: inline-block;
+  margin-bottom: 0;
+  font-size: 18px;
+  padding: 15px 0 15px 0; }
 
-.cal-dateheader-btn {
-  height: 47px; }
-  .cal-dateheader-btn:hover {
-    text-decoration: underline; }
+#bb [bb-calendar-admin] .bb-filter-icon {
+  height: 33px;
+  padding-right: 5px;
+  display: inline-block;
+  vertical-align: middle; }
 
-.section3 {
-  border-top: 1px solid #dddddd;
-  padding-top: 20px;
-  padding-bottom: 20px; }
-
-.cal-modal-header {
-  background-color: #de5551;
-  padding-top: 1px;
-  padding-bottom: 1px; }
-  .cal-modal-header .cal-modal-h-text {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    margin-left: 10px;
-    color: white; }
-
-.cal-modal-body {
-  margin-top: 15px;
-  margin-bottom: 15px; }
-
-.widget-wrapper .header-top, .widget-wrapper .header-top:hover {
-  text-decoration: none;
-  border-bottom: 1px solid #666;
-  margin-bottom: 20px;
-  padding-top: 5px;
-  border-top: 1px solid #dddddd !important; }
-  .widget-wrapper .header-top h2, .widget-wrapper .header-top:hover h2 {
-    font-size: 28px !important;
-    font-weight: 300;
-    text-align: center; }
-
-.widget-wrapper .header-top {
-  border-bottom: 1px solid #CCC; }
-
-.widget-wrapper ul {
-  list-style: none;
-  padding-left: 0px; }
-
-.widget-wrapper ul li {
-  padding: 15px;
-  border: 1px solid #eee; }
-
-.widget-wrapper span {
-  margin-right: 10px; }
-
-.bb-admin-client {
+#bb .bb-admin-client {
   text-align: left; }
-  .bb-admin-client .page-intro {
+  #bb .bb-admin-client .page-intro {
     text-align: center; }
-  .bb-admin-client .section-title {
+  #bb .bb-admin-client .section-title {
     text-align: center; }
-  .bb-admin-client .bb-button-headers {
+  #bb .bb-admin-client .bb-button-headers {
     margin-bottom: 70px;
     border-bottom: 1px solid #999; }
-    .bb-admin-client .bb-button-headers button {
+    #bb .bb-admin-client .bb-button-headers button {
       border-color: #bbb;
       border-radius: 15px;
       border-bottom-left-radius: 0px;
       border-bottom-right-radius: 0px; }
-  .bb-admin-client tfoot {
+  #bb .bb-admin-client tfoot {
     display: none; }
 
-.admin-typehead {
+#bb .admin-typehead {
   padding-left: 5px;
   border-radius: 5px;
   border: 1px #D5D5D5 solid;
   font-size: 18px; }
 
-.admin-typehead-wrapper {
+#bb .admin-typehead-wrapper {
   padding-right: 5px;
   margin-bottom: 20px;
   padding-left: 15px;
   padding-right: 15px; }
-  .admin-typehead-wrapper .dropdown-menu {
+  #bb .admin-typehead-wrapper .dropdown-menu {
     max-height: 500px;
     overflow: auto; }
-    .admin-typehead-wrapper .dropdown-menu .typeahead_match {
+    #bb .admin-typehead-wrapper .dropdown-menu .typeahead_match {
       border-bottom: 1px solid #999;
       padding: 3px; }
-      .admin-typehead-wrapper .dropdown-menu .typeahead_match:hover {
+      #bb .admin-typehead-wrapper .dropdown-menu .typeahead_match:hover {
         background-color: #CCC;
         cursor: pointer; }
 
-.typehead-client-wrapper {
+#bb .typehead-client-wrapper {
   border: 1px solid #D5D5D5;
   border-bottom: 0;
   border-left: 0;
@@ -117,24 +64,24 @@
   padding-top: 10px;
   padding-bottom: 10px; }
 
-.panel-client-close {
+#bb .panel-client-close {
   padding-top: 2px;
   float: right; }
-  .panel-client-close:hover {
+  #bb .panel-client-close:hover {
     transition: 0.5s;
     transform: scale(1.25); }
 
-.btn-search-anyway {
+#bb .btn-search-anyway {
   padding-top: 13px;
   padding-bottom: 14px; }
 
-.admin-form-submit {
+#bb .admin-form-submit {
   margin-top: 20px; }
 
-.search-results {
+#bb .search-results {
   margin-top: 40px; }
 
-.typehead-results-wrapper {
+#bb .typehead-results-wrapper {
   font-size: 18px;
   padding: 0;
   padding-left: 10px;
@@ -143,9 +90,16 @@
   border: 1px solid #D5D5D5;
   border-top: 0px; }
 
-.admin-typehead .dropdown-menu {
+#bb .admin-typehead .dropdown-menu {
   max-height: 500px;
   overflow: auto; }
 
-.bb-date-picker [timepicker] {
+#bb .bb-date-picker [timepicker] {
   margin-top: -32px; }
+
+#bb[bb-admin-booking] .form-control {
+  border-radius: 4px !important; }
+
+#bb[bb-admin-booking] .input-group .form-control:first-child {
+  border-bottom-right-radius: 0 !important;
+  border-top-right-radius: 0 !important; }
