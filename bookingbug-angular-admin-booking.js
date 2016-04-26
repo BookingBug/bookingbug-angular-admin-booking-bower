@@ -466,6 +466,7 @@
         return PathSvc.directivePartial("_datetime_picker");
       },
       controller: function($scope, $filter, $timeout, GeneralOptions) {
+        var filterDate;
         if (!$scope.minuteStep || typeof $scope.minuteStep === 'undefined') {
           $scope.minuteStep = GeneralOptions.calendar_minute_step;
         }
@@ -473,7 +474,7 @@
           $scope.showMeridian = GeneralOptions.twelve_hour_format;
         }
         $scope.$watch('datetimeWithNoTz', function(newValue, oldValue) {
-          var assembledDate, minDateDate;
+          var assembledDate, maxDateClean, minDateDate;
           newValue = new Date(newValue);
           if ((newValue != null) && moment(newValue).isValid()) {
             assembledDate = moment();
@@ -497,18 +498,40 @@
                 $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
               }
             }
+            if ($scope.maxDateClean != null) {
+              maxDateClean = new Date($scope.maxDateClean);
+              if ((newValue.getTime() / 1000) > (maxDateClean.getTime() / 1000)) {
+                if (newValue.getHours() > maxDateClean.getHours()) {
+                  assembledDate.hours(parseInt(maxDateClean.getHours()));
+                }
+                if (newValue.getMinutes() > maxDateClean.getMinutes()) {
+                  assembledDate.minutes(parseInt(maxDateClean.getMinutes()));
+                }
+                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
+              }
+            }
             $scope.date = assembledDate.format();
           }
         });
         $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
         $scope.minDateClean = null;
         $scope.maxDateClean = null;
-        if (($scope.minDate != null) && moment($scope.minDate).isValid()) {
-          $scope.minDateClean = $filter('clearTimezone')(moment($scope.minDate).format());
-        }
-        if (($scope.maxDate != null) && moment($scope.maxDate).isValid()) {
-          return $scope.maxDateClean = $filter('clearTimezone')(moment($scope.maxDate).format());
-        }
+        $scope.$watch('minDate', function(newValue, oldValue) {
+          if (newValue !== oldValue) {
+            return $scope.minDateClean = filterDate(newValue);
+          }
+        });
+        $scope.$watch('maxDate', function(newValue, oldValue) {
+          if (newValue !== oldValue) {
+            return $scope.maxDateClean = filterDate(newValue);
+          }
+        });
+        return filterDate = function(date) {
+          if ((date != null) && moment(date).isValid()) {
+            return $filter('clearTimezone')(moment(date).format());
+          }
+          return null;
+        };
       }
     };
   });
