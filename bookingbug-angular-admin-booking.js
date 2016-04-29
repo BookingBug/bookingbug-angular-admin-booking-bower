@@ -55,6 +55,214 @@
 }).call(this);
 
 (function() {
+  'use strict';
+  angular.module('BB.Directives').directive('bbCalendarAdmin', function() {
+    return {
+      restrict: 'AE',
+      replace: true,
+      scope: true,
+      controller: 'calendarAdminCtrl'
+    };
+  });
+
+  angular.module('BB.Controllers').controller('calendarAdminCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel, $rootScope) {
+    angular.extend(this, $controller('TimeList', {
+      $scope: $scope,
+      $attrs: $attrs,
+      $element: $element
+    }));
+    $scope.calendar_view = {
+      next_available: false,
+      day: false,
+      multi_day: false
+    };
+    $rootScope.connection_started.then(function() {
+      if ($scope.bb.item_defaults.pick_first_time) {
+        $scope.switchView('next_available');
+      } else if ($scope.bb.current_item.defaults.time) {
+        $scope.switchView('day');
+      } else {
+        $scope.switchView('multi_day');
+      }
+      if ($scope.bb.current_item.person) {
+        $scope.person_name = $scope.bb.current_item.person.name;
+      }
+      if ($scope.bb.current_item.resource) {
+        return $scope.resource_name = $scope.bb.current_item.resource.name;
+      }
+    });
+    $scope.switchView = function(view) {
+      var key, ref, value;
+      ref = $scope.calendar_view;
+      for (key in ref) {
+        value = ref[key];
+        $scope.calendar_view[key] = false;
+      }
+      return $scope.calendar_view[view] = true;
+    };
+    return $scope.overBook = function() {
+      var new_timeslot;
+      new_timeslot = new BBModel.TimeSlot({
+        time: $scope.bb.current_item.defaults.time,
+        avail: 1
+      });
+      if ($scope.selected_day) {
+        $scope.setLastSelectedDate($scope.selected_day.date);
+        $scope.bb.current_item.setDate($scope.selected_day);
+      }
+      $scope.bb.current_item.setTime(new_timeslot);
+      return $scope.decideNextPage();
+    };
+  });
+
+}).call(this);
+
+(function() {
+  'use strict';
+  angular.module('BBAdminBooking').directive('bbAdminBookingClients', function() {
+    return {
+      restrict: 'AE',
+      replace: true,
+      scope: true,
+      controller: 'adminBookingClients'
+    };
+  });
+
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log, PaginationService) {
+    $scope.validator = ValidatorService;
+    $scope.clientDef = $q.defer();
+    $scope.clientPromise = $scope.clientDef.promise;
+    $scope.per_page = 20;
+    $scope.total_entries = 0;
+    $scope.clients = [];
+    $scope.search_clients = false;
+    $scope.newClient = false;
+    $scope.no_clients = false;
+    $scope.search_error = false;
+    $scope.search_text = null;
+    $scope.pagination = PaginationService.initialise({
+      page_size: 10,
+      max_size: 5
+    });
+    $scope.showSearch = (function(_this) {
+      return function() {
+        $scope.search_clients = true;
+        return $scope.newClient = false;
+      };
+    })(this);
+    $scope.showClientForm = (function(_this) {
+      return function() {
+        $scope.search_error = false;
+        $scope.no_clients = false;
+        $scope.search_clients = false;
+        $scope.newClient = true;
+        return $scope.clearClient();
+      };
+    })(this);
+    $scope.selectClient = (function(_this) {
+      return function(client, route) {
+        $scope.search_error = false;
+        $scope.no_clients = false;
+        $scope.setClient(client);
+        $scope.client.setValid(true);
+        return $scope.decideNextPage(route);
+      };
+    })(this);
+    $scope.checkSearch = (function(_this) {
+      return function() {
+        if ($scope.search_text && $scope.search_text.length >= 3) {
+          $scope.search_error = false;
+          return true;
+        } else {
+          $scope.search_error = true;
+          return false;
+        }
+      };
+    })(this);
+    $scope.createClient = (function(_this) {
+      return function(route) {
+        $scope.notLoaded($scope);
+        if ($scope.bb && $scope.bb.parent_client) {
+          $scope.client.parent_client_id = $scope.bb.parent_client.id;
+        }
+        if ($scope.client_details) {
+          $scope.client.setClientDetails($scope.client_details);
+        }
+        return ClientService.create_or_update($scope.bb.company, $scope.client).then(function(client) {
+          $scope.setLoaded($scope);
+          return $scope.selectClient(client, route);
+        }, function(err) {
+          return $scope.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
+        });
+      };
+    })(this);
+    $scope.getClients = function(currentPage, filterBy, filterByFields, orderBy, orderByReverse) {
+      var clientDef, params;
+      AlertService.clear();
+      $scope.search_triggered = true;
+      $scope.no_clients = false;
+      $scope.search_error = false;
+      clientDef = $q.defer();
+      params = {
+        company: $scope.bb.company,
+        per_page: $scope.per_page,
+        filter_by: filterBy != null ? filterBy : $scope.search_text,
+        filter_by_fields: filterByFields,
+        order_by: orderBy,
+        order_by_reverse: orderByReverse
+      };
+      if (currentPage) {
+        params.page = currentPage + 1;
+      }
+      $scope.notLoaded($scope);
+      if (!$rootScope.bb.api_url && $scope.bb.api_url) {
+        $rootScope.bb.api_url = $scope.bb.api_url;
+      }
+      return AdminClientService.query(params).then((function(_this) {
+        return function(clients) {
+          $scope.clients = clients.items;
+          $scope.setLoaded($scope);
+          $scope.setPageLoaded();
+          $scope.total_entries = clients.total_entries;
+          PaginationService.update($scope.pagination, $scope.clients.length);
+          return clientDef.resolve(clients.items);
+        };
+      })(this));
+    };
+    $scope.searchClients = function(search_text) {
+      var clientDef, params;
+      clientDef = $q.defer();
+      params = {
+        filter_by: search_text,
+        company: $scope.bb.company
+      };
+      AdminClientService.query(params).then((function(_this) {
+        return function(clients) {
+          clientDef.resolve(clients.items);
+          return clients.items;
+        };
+      })(this));
+      return clientDef.promise;
+    };
+    $scope.typeHeadResults = function($item, $model, $label) {
+      var item, label, model;
+      item = $item;
+      model = $model;
+      label = $label;
+      $scope.client = item;
+    };
+    $scope.clearSearch = function() {
+      $scope.clients = null;
+      return $scope.search_triggered = false;
+    };
+    return $scope.edit = function(item) {
+      return $log.info("not implemented");
+    };
+  });
+
+}).call(this);
+
+(function() {
   angular.module('BBAdminBooking').directive('bbAdminBooking', function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http) {
     var getTemplate, link, renderTemplate;
     getTemplate = function(template) {
@@ -133,7 +341,7 @@
     return {
       scope: true,
       restrict: 'A',
-      controller: function($scope, $element, $attrs, AdminPersonService, BBModel, BookingCollections, $rootScope) {
+      controller: function($scope, $element, $attrs, AdminPersonService, AdminResourceService, BBModel, BookingCollections, $rootScope) {
         var blockSuccess, isValid;
         $scope.resources = [];
         if ($scope.bb.current_item.company.$has('people')) {
@@ -360,214 +568,6 @@
 }).call(this);
 
 (function() {
-  'use strict';
-  angular.module('BB.Directives').directive('bbCalendarAdmin', function() {
-    return {
-      restrict: 'AE',
-      replace: true,
-      scope: true,
-      controller: 'calendarAdminCtrl'
-    };
-  });
-
-  angular.module('BB.Controllers').controller('calendarAdminCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel, $rootScope) {
-    angular.extend(this, $controller('TimeList', {
-      $scope: $scope,
-      $attrs: $attrs,
-      $element: $element
-    }));
-    $scope.calendar_view = {
-      next_available: false,
-      day: false,
-      multi_day: false
-    };
-    $rootScope.connection_started.then(function() {
-      if ($scope.bb.item_defaults.pick_first_time) {
-        $scope.switchView('next_available');
-      } else if ($scope.bb.current_item.defaults.time) {
-        $scope.switchView('day');
-      } else {
-        $scope.switchView('multi_day');
-      }
-      if ($scope.bb.current_item.person) {
-        $scope.person_name = $scope.bb.current_item.person.name;
-      }
-      if ($scope.bb.current_item.resource) {
-        return $scope.resource_name = $scope.bb.current_item.resource.name;
-      }
-    });
-    $scope.switchView = function(view) {
-      var key, ref, value;
-      ref = $scope.calendar_view;
-      for (key in ref) {
-        value = ref[key];
-        $scope.calendar_view[key] = false;
-      }
-      return $scope.calendar_view[view] = true;
-    };
-    return $scope.overBook = function() {
-      var new_timeslot;
-      new_timeslot = new BBModel.TimeSlot({
-        time: $scope.bb.current_item.defaults.time,
-        avail: 1
-      });
-      if ($scope.selected_day) {
-        $scope.setLastSelectedDate($scope.selected_day.date);
-        $scope.bb.current_item.setDate($scope.selected_day);
-      }
-      $scope.bb.current_item.setTime(new_timeslot);
-      return $scope.decideNextPage();
-    };
-  });
-
-}).call(this);
-
-(function() {
-  'use strict';
-  angular.module('BBAdminBooking').directive('bbAdminBookingClients', function() {
-    return {
-      restrict: 'AE',
-      replace: true,
-      scope: true,
-      controller: 'adminBookingClients'
-    };
-  });
-
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log, PaginationService) {
-    $scope.validator = ValidatorService;
-    $scope.clientDef = $q.defer();
-    $scope.clientPromise = $scope.clientDef.promise;
-    $scope.per_page = 20;
-    $scope.total_entries = 0;
-    $scope.clients = [];
-    $scope.search_clients = false;
-    $scope.newClient = false;
-    $scope.no_clients = false;
-    $scope.search_error = false;
-    $scope.search_text = null;
-    $scope.pagination = PaginationService.initialise({
-      page_size: 10,
-      max_size: 5
-    });
-    $scope.showSearch = (function(_this) {
-      return function() {
-        $scope.search_clients = true;
-        return $scope.newClient = false;
-      };
-    })(this);
-    $scope.showClientForm = (function(_this) {
-      return function() {
-        $scope.search_error = false;
-        $scope.no_clients = false;
-        $scope.search_clients = false;
-        $scope.newClient = true;
-        return $scope.clearClient();
-      };
-    })(this);
-    $scope.selectClient = (function(_this) {
-      return function(client, route) {
-        $scope.search_error = false;
-        $scope.no_clients = false;
-        $scope.setClient(client);
-        $scope.client.setValid(true);
-        return $scope.decideNextPage(route);
-      };
-    })(this);
-    $scope.checkSearch = (function(_this) {
-      return function() {
-        if ($scope.search_text && $scope.search_text.length >= 3) {
-          $scope.search_error = false;
-          return true;
-        } else {
-          $scope.search_error = true;
-          return false;
-        }
-      };
-    })(this);
-    $scope.createClient = (function(_this) {
-      return function(route) {
-        $scope.notLoaded($scope);
-        if ($scope.bb && $scope.bb.parent_client) {
-          $scope.client.parent_client_id = $scope.bb.parent_client.id;
-        }
-        if ($scope.client_details) {
-          $scope.client.setClientDetails($scope.client_details);
-        }
-        return ClientService.create_or_update($scope.bb.company, $scope.client).then(function(client) {
-          $scope.setLoaded($scope);
-          return $scope.selectClient(client, route);
-        }, function(err) {
-          return $scope.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
-        });
-      };
-    })(this);
-    $scope.getClients = function(currentPage, filterBy, filterByFields, orderBy, orderByReverse) {
-      var clientDef, params;
-      AlertService.clear();
-      $scope.search_triggered = true;
-      $scope.no_clients = false;
-      $scope.search_error = false;
-      clientDef = $q.defer();
-      params = {
-        company: $scope.bb.company,
-        per_page: $scope.per_page,
-        filter_by: filterBy != null ? filterBy : $scope.search_text,
-        filter_by_fields: filterByFields,
-        order_by: orderBy,
-        order_by_reverse: orderByReverse
-      };
-      if (currentPage) {
-        params.page = currentPage + 1;
-      }
-      $scope.notLoaded($scope);
-      if (!$rootScope.bb.api_url && $scope.bb.api_url) {
-        $rootScope.bb.api_url = $scope.bb.api_url;
-      }
-      return AdminClientService.query(params).then((function(_this) {
-        return function(clients) {
-          $scope.clients = clients.items;
-          $scope.setLoaded($scope);
-          $scope.setPageLoaded();
-          $scope.total_entries = clients.total_entries;
-          PaginationService.update($scope.pagination, $scope.clients.length);
-          return clientDef.resolve(clients.items);
-        };
-      })(this));
-    };
-    $scope.searchClients = function(search_text) {
-      var clientDef, params;
-      clientDef = $q.defer();
-      params = {
-        filter_by: search_text,
-        company: $scope.bb.company
-      };
-      AdminClientService.query(params).then((function(_this) {
-        return function(clients) {
-          clientDef.resolve(clients.items);
-          return clients.items;
-        };
-      })(this));
-      return clientDef.promise;
-    };
-    $scope.typeHeadResults = function($item, $model, $label) {
-      var item, label, model;
-      item = $item;
-      model = $model;
-      label = $label;
-      $scope.client = item;
-    };
-    $scope.clearSearch = function() {
-      $scope.clients = null;
-      return $scope.search_triggered = false;
-    };
-    return $scope.edit = function(item) {
-      return $log.info("not implemented");
-    };
-  });
-
-}).call(this);
-
-(function() {
   angular.module('BB.Filters').filter('in_the_future', function() {
     return function(slots) {
       var now_tod, tim;
@@ -662,6 +662,57 @@
 
 /*
 * @ngdoc service
+* @name BBAdminBooking.service:BBAssets
+* @description
+* Gets all the resources for the callendar
+ */
+
+(function() {
+  angular.module('BBAdminBooking').factory('BBAssets', [
+    '$q', function($q) {
+      return function(company) {
+        var assets, delay, promises;
+        delay = $q.defer();
+        promises = [];
+        assets = [];
+        if (company.$has('people')) {
+          promises.push(company.getPeoplePromise().then(function(people) {
+            var i, len, p;
+            for (i = 0, len = people.length; i < len; i++) {
+              p = people[i];
+              p.title = p.name;
+              p.identifier = p.id + '_p';
+              p.group = 'Staff';
+            }
+            return assets = _.union(assets, people);
+          }));
+        }
+        if (company.$has('resources')) {
+          promises.push(company.getResourcesPromise().then(function(resources) {
+            var i, len, r;
+            for (i = 0, len = resources.length; i < len; i++) {
+              r = resources[i];
+              r.title = r.name;
+              r.identifier = r.id + '_r';
+              r.group = 'Resources ';
+            }
+            return assets = _.union(assets, resources);
+          }));
+        }
+        $q.all(promises).then(function() {
+          assets = _.sortBy(assets, 'name');
+          return delay.resolve(assets);
+        });
+        return delay.promise;
+      };
+    }
+  ]);
+
+}).call(this);
+
+
+/*
+* @ngdoc service
 * @module BBAdminBooking
 * @name GeneralOptions
 *
@@ -702,6 +753,33 @@
       this.$get = function() {
         return options;
       };
+    }
+  ]);
+
+}).call(this);
+
+
+/*
+* @ngdoc service
+* @name BBAdminBooking.service:ProcessAssetsFilter
+* @description
+* Returns array of assets from a comma delimited string
+ */
+
+(function() {
+  angular.module('BBAdminBooking').factory('ProcessAssetsFilter', [
+    function() {
+      return function(string) {
+        var assets;
+        assets = [];
+        if (typeof string === 'undefined' || string === '') {
+          return assets;
+        }
+        return angular.forEach(string.split(','), function(value) {
+          return assets.push(parseInt(decodeURIComponent(value)));
+        });
+      };
+      return assets;
     }
   ]);
 
