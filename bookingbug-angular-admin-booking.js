@@ -420,12 +420,18 @@
           }
           return true;
         };
-        return blockSuccess = function(response) {
+        blockSuccess = function(response) {
           var booking;
           booking = new BBModel.Admin.Booking(response);
           BookingCollections.checkItems(booking);
           $rootScope.$broadcast('refetchBookings');
           return $scope.cancel();
+        };
+        return $scope.changeBlockDay = function(blockDay) {
+          if (blockDay) {
+            $scope.config.from_datetime = $scope.config.min_date.format();
+            return $scope.config.to_datetime = $scope.config.max_date.format();
+          }
         };
       }
     };
@@ -532,6 +538,11 @@
           }
         });
         $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
+        $scope.$watch('date', function(newValue, oldValue) {
+          if (newValue !== oldValue) {
+            return $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
+          }
+        });
         $scope.$watch('minDate', function(newValue, oldValue) {
           if (newValue !== oldValue) {
             return $scope.minDateClean = filterDate(newValue);
