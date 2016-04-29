@@ -55,6 +55,311 @@
 }).call(this);
 
 (function() {
+  angular.module('BBAdminBooking').directive('bbAdminBooking', function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http) {
+    var getTemplate, link, renderTemplate;
+    getTemplate = function(template) {
+      var fromTemplateCache, partial, src;
+      partial = template ? template : 'main';
+      fromTemplateCache = $templateCache.get(partial);
+      if (fromTemplateCache) {
+        return fromTemplateCache;
+      } else {
+        src = PathSvc.directivePartial(partial).$$unwrapTrustedValue();
+        return $http.get(src, {
+          cache: $templateCache
+        }).then(function(response) {
+          return response.data;
+        });
+      }
+    };
+    renderTemplate = function(scope, element, design_mode, template) {
+      return $q.when(getTemplate(template)).then(function(template) {
+        element.html(template).show();
+        if (design_mode) {
+          element.append('<style widget_css scoped></style>');
+        }
+        return $compile(element.contents())(scope);
+      });
+    };
+    link = function(scope, element, attrs) {
+      var config;
+      config = scope.$eval(attrs.bbAdminBooking);
+      config || (config = {});
+      config.admin = true;
+      if (!attrs.companyId) {
+        if (config.company_id) {
+          attrs.companyId = config.company_id;
+        } else if (scope.company) {
+          attrs.companyId = scope.company.id;
+        }
+      }
+      if (attrs.companyId) {
+        return AdminCompanyService.query(attrs).then(function(company) {
+          scope.company = company;
+          scope.initWidget(config);
+          return renderTemplate(scope, element, config.design_mode, config.template);
+        });
+      }
+    };
+    return {
+      link: link,
+      controller: 'BBCtrl'
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').directive('bbAdminBookingPopup', function(AdminBookingPopup) {
+    return {
+      restrict: 'A',
+      link: function(scope, element, attrs) {
+        return element.bind('click', function() {
+          return scope.open();
+        });
+      },
+      controller: function($scope) {
+        return $scope.open = function() {
+          return AdminBookingPopup.open();
+        };
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').directive('bbBlockTime', function() {
+    return {
+      scope: true,
+      restrict: 'A',
+      controller: function($scope, $element, $attrs, AdminPersonService, BBModel, BookingCollections, $rootScope) {
+        var blockSuccess, isValid;
+        $scope.resources = [];
+        if ($scope.bb.current_item.company.$has('people')) {
+          $scope.bb.current_item.company.getPeoplePromise().then(function(people) {
+            var i, len, p;
+            for (i = 0, len = people.length; i < len; i++) {
+              p = people[i];
+              p.title = p.name;
+              p.identifier = p.id + '_p';
+              p.group = 'Staff';
+            }
+            return $scope.resources = _.union($scope.resources, people);
+          });
+        }
+        if ($scope.bb.current_item.company.$has('resources')) {
+          $scope.bb.current_item.company.getResourcesPromise().then(function(resources) {
+            var i, len, r;
+            for (i = 0, len = resources.length; i < len; i++) {
+              r = resources[i];
+              r.title = r.name;
+              r.identifier = r.id + '_r';
+              r.group = 'Resources ';
+            }
+            return $scope.resources = _.union($scope.resources, resources);
+          });
+        }
+        if (($scope.bb.current_item.person != null) && ($scope.bb.current_item.person.id != null)) {
+          $scope.picked_resource = $scope.bb.current_item.person.id + '_p';
+        }
+        if (($scope.bb.current_item.resource != null) && ($scope.bb.current_item.resource.id != null)) {
+          $scope.picked_resource = $scope.bb.current_item.resource.id + '_r';
+        }
+        $scope.changeResource = function() {
+          var parts;
+          if ($scope.picked_resource != null) {
+            $scope.resourceError = false;
+            parts = $scope.picked_resource.split('_');
+            return angular.forEach($scope.resources, function(value, key) {
+              if (value.identifier === $scope.picked_resource) {
+                if (parts[1] === 'p') {
+                  $scope.bb.current_item.person = value;
+                } else if (parts[1] === 'r') {
+                  $scope.bb.current_item.resource = value;
+                }
+              }
+            });
+          }
+        };
+        $scope.blockTime = function() {
+          if (!isValid()) {
+            return false;
+          }
+          if (typeof $scope.bb.current_item.person === 'object') {
+            return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
+              start_time: $scope.config.from_datetime,
+              end_time: $scope.config.to_datetime
+            }).then(function(response) {
+              return blockSuccess(response);
+            });
+          } else if (typeof $scope.bb.current_item.resource === 'object') {
+            return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.person, {
+              start_time: $scope.config.from_datetime,
+              end_time: $scope.config.to_datetime
+            }).then(function(response) {
+              return blockSuccess(response);
+            });
+          }
+        };
+        isValid = function() {
+          $scope.resourceError = false;
+          if (typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') {
+            $scope.resourceError = true;
+          }
+          if ((typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') || ($scope.config.from_datetime == null) || !$scope.config.to_datetime) {
+            return false;
+          }
+          return true;
+        };
+        blockSuccess = function(response) {
+          var booking;
+          booking = new BBModel.Admin.Booking(response);
+          BookingCollections.checkItems(booking);
+          $rootScope.$broadcast('refetchBookings');
+          return $scope.cancel();
+        };
+        return $scope.changeBlockDay = function(blockDay) {
+          if (blockDay) {
+            $scope.config.from_datetime = $scope.config.min_date.format();
+            return $scope.config.to_datetime = $scope.config.max_date.format();
+          }
+        };
+      }
+    };
+  });
+
+}).call(this);
+
+
+/***
+* @ngdoc directive
+* @name BBAdminBooking.directive:bbDateTimePicker
+* @scope
+* @restrict A
+*
+* @description
+* DateTime picker that combines date & timepicker and consolidates 
+* the Use of Moment.js in the App and Date in the pickers 
+*
+* @param {object}  date   A moment.js date object
+* @param {boolean}  showMeridian   Switch to show/hide meridian (optional, default:false)
+* @param {number}  minuteStep Step for the timepicker (optional, default:10)
+* @param {object}  minDate Min date value for datetimepicker
+* @param {object}  maxDate Max date value for datetimepicker
+ */
+
+(function() {
+  angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
+    return {
+      scope: {
+        date: '=',
+        showMeridian: '=?',
+        minuteStep: '=?',
+        minDate: '=?',
+        maxDate: '=?'
+      },
+      restrict: 'A',
+      templateUrl: function(element, attrs) {
+        return PathSvc.directivePartial("_datetime_picker");
+      },
+      controller: function($scope, $filter, $timeout, GeneralOptions) {
+        var filterDate;
+        if (!$scope.minuteStep || typeof $scope.minuteStep === 'undefined') {
+          $scope.minuteStep = GeneralOptions.calendar_minute_step;
+        }
+        if (!$scope.showMeridian || typeof $scope.showMeridian === 'undefined') {
+          $scope.showMeridian = GeneralOptions.twelve_hour_format;
+        }
+        $scope.$watch('datetimeWithNoTz', function(newValue, oldValue) {
+          var assembledDate, maxDateClean, minDateDate;
+          newValue = new Date(newValue);
+          if ((newValue != null) && moment(newValue).isValid()) {
+            assembledDate = moment();
+            assembledDate.set({
+              'year': parseInt(newValue.getFullYear()),
+              'month': parseInt(newValue.getMonth()),
+              'date': parseInt(newValue.getDate()),
+              'hour': parseInt(newValue.getHours()),
+              'minute': parseInt(newValue.getMinutes()),
+              'second': 0
+            });
+            if ($scope.minDateClean != null) {
+              minDateDate = new Date($scope.minDateClean);
+              if ((newValue.getTime() / 1000) < (minDateDate.getTime() / 1000)) {
+                if (newValue.getFullYear() < minDateDate.getFullYear()) {
+                  assembledDate.year(parseInt(minDateDate.getFullYear()));
+                }
+                if (newValue.getMonth() < minDateDate.getMonth()) {
+                  assembledDate.month(parseInt(minDateDate.getMonth()));
+                }
+                if (newValue.getDate() < minDateDate.getDate()) {
+                  assembledDate.date(parseInt(minDateDate.getDate()));
+                }
+                if (newValue.getHours() < minDateDate.getHours()) {
+                  assembledDate.hours(parseInt(minDateDate.getHours()));
+                }
+                if (newValue.getMinutes() < minDateDate.getMinutes()) {
+                  assembledDate.minutes(parseInt(minDateDate.getMinutes()));
+                }
+                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
+              }
+            }
+            if ($scope.maxDateClean != null) {
+              maxDateClean = new Date($scope.maxDateClean);
+              if ((newValue.getTime() / 1000) > (maxDateClean.getTime() / 1000)) {
+                if (newValue.getFullYear() > minDateDate.getFullYear()) {
+                  assembledDate.year(parseInt(minDateDate.getFullYear()));
+                }
+                if (newValue.getMonth() > minDateDate.getMonth()) {
+                  assembledDate.month(parseInt(minDateDate.getMonth()));
+                }
+                if (newValue.getDate() > minDateDate.getDate()) {
+                  assembledDate.date(parseInt(minDateDate.getDate()));
+                }
+                if (newValue.getHours() > maxDateClean.getHours()) {
+                  assembledDate.hours(parseInt(maxDateClean.getHours()));
+                }
+                if (newValue.getMinutes() > maxDateClean.getMinutes()) {
+                  assembledDate.minutes(parseInt(maxDateClean.getMinutes()));
+                }
+                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
+              }
+            }
+            $scope.date = assembledDate.format();
+          }
+        });
+        $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
+        $scope.$watch('date', function(newValue, oldValue) {
+          if (newValue !== oldValue) {
+            return $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
+          }
+        });
+        $scope.$watch('minDate', function(newValue, oldValue) {
+          if (newValue !== oldValue) {
+            return $scope.minDateClean = filterDate(newValue);
+          }
+        });
+        $scope.$watch('maxDate', function(newValue, oldValue) {
+          if (newValue !== oldValue) {
+            return $scope.maxDateClean = filterDate(newValue);
+          }
+        });
+        filterDate = function(date) {
+          if ((date != null) && moment(date).isValid()) {
+            return $filter('clearTimezone')(moment(date).format());
+          }
+          return null;
+        };
+        $scope.minDateClean = filterDate($scope.minDate);
+        return $scope.maxDateClean = filterDate($scope.maxDate);
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
   'use strict';
   angular.module('BB.Directives').directive('bbCalendarAdmin', function() {
     return {
@@ -257,300 +562,6 @@
     };
     return $scope.edit = function(item) {
       return $log.info("not implemented");
-    };
-  });
-
-}).call(this);
-
-(function() {
-  angular.module('BBAdminBooking').directive('bbAdminBooking', function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http) {
-    var getTemplate, link, renderTemplate;
-    getTemplate = function(template) {
-      var fromTemplateCache, partial, src;
-      partial = template ? template : 'main';
-      fromTemplateCache = $templateCache.get(partial);
-      if (fromTemplateCache) {
-        return fromTemplateCache;
-      } else {
-        src = PathSvc.directivePartial(partial).$$unwrapTrustedValue();
-        return $http.get(src, {
-          cache: $templateCache
-        }).then(function(response) {
-          return response.data;
-        });
-      }
-    };
-    renderTemplate = function(scope, element, design_mode, template) {
-      return $q.when(getTemplate(template)).then(function(template) {
-        element.html(template).show();
-        if (design_mode) {
-          element.append('<style widget_css scoped></style>');
-        }
-        return $compile(element.contents())(scope);
-      });
-    };
-    link = function(scope, element, attrs) {
-      var config;
-      config = scope.$eval(attrs.bbAdminBooking);
-      config || (config = {});
-      config.admin = true;
-      if (!attrs.companyId) {
-        if (config.company_id) {
-          attrs.companyId = config.company_id;
-        } else if (scope.company) {
-          attrs.companyId = scope.company.id;
-        }
-      }
-      if (attrs.companyId) {
-        return AdminCompanyService.query(attrs).then(function(company) {
-          scope.company = company;
-          scope.initWidget(config);
-          return renderTemplate(scope, element, config.design_mode, config.template);
-        });
-      }
-    };
-    return {
-      link: link,
-      controller: 'BBCtrl'
-    };
-  });
-
-}).call(this);
-
-(function() {
-  angular.module('BBAdminBooking').directive('bbAdminBookingPopup', function(AdminBookingPopup) {
-    return {
-      restrict: 'A',
-      link: function(scope, element, attrs) {
-        return element.bind('click', function() {
-          return scope.open();
-        });
-      },
-      controller: function($scope) {
-        return $scope.open = function() {
-          return AdminBookingPopup.open();
-        };
-      }
-    };
-  });
-
-}).call(this);
-
-(function() {
-  angular.module('BBAdminBooking').directive('bbBlockTime', function() {
-    return {
-      scope: true,
-      restrict: 'A',
-      controller: function($scope, $element, $attrs, AdminPersonService, BBModel, BookingCollections, $rootScope) {
-        var blockSuccess, isValid;
-        $scope.resources = [];
-        if ($scope.bb.current_item.company.$has('people')) {
-          $scope.bb.current_item.company.getPeoplePromise().then(function(people) {
-            var i, len, p;
-            for (i = 0, len = people.length; i < len; i++) {
-              p = people[i];
-              p.title = p.name;
-              p.identifier = p.id + '_p';
-              p.group = 'Staff';
-            }
-            return $scope.resources = _.union($scope.resources, people);
-          });
-        }
-        if ($scope.bb.current_item.company.$has('resources')) {
-          $scope.bb.current_item.company.getResourcesPromise().then(function(resources) {
-            var i, len, r;
-            for (i = 0, len = resources.length; i < len; i++) {
-              r = resources[i];
-              r.title = r.name;
-              r.identifier = r.id + '_r';
-              r.group = 'Resources ';
-            }
-            return $scope.resources = _.union($scope.resources, resources);
-          });
-        }
-        if (($scope.bb.current_item.person != null) && ($scope.bb.current_item.person.id != null)) {
-          $scope.picked_resource = $scope.bb.current_item.person.id + '_p';
-        }
-        if (($scope.bb.current_item.resource != null) && ($scope.bb.current_item.resource.id != null)) {
-          $scope.picked_resource = $scope.bb.current_item.resource.id + '_r';
-        }
-        $scope.changeResource = function() {
-          var parts;
-          if ($scope.picked_resource != null) {
-            $scope.resourceError = false;
-            parts = $scope.picked_resource.split('_');
-            return angular.forEach($scope.resources, function(value, key) {
-              if (value.identifier === $scope.picked_resource) {
-                if (parts[1] === 'p') {
-                  $scope.bb.current_item.person = value;
-                } else if (parts[1] === 'r') {
-                  $scope.bb.current_item.resource = value;
-                }
-              }
-            });
-          }
-        };
-        $scope.blockTime = function() {
-          if (!isValid()) {
-            return false;
-          }
-          if (typeof $scope.bb.current_item.person === 'object') {
-            return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
-              start_time: $scope.config.from_datetime,
-              end_time: $scope.config.to_datetime
-            }).then(function(response) {
-              return blockSuccess(response);
-            });
-          } else if (typeof $scope.bb.current_item.resource === 'object') {
-            return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.person, {
-              start_time: $scope.config.from_datetime,
-              end_time: $scope.config.to_datetime
-            }).then(function(response) {
-              return blockSuccess(response);
-            });
-          }
-        };
-        isValid = function() {
-          $scope.resourceError = false;
-          if (typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') {
-            $scope.resourceError = true;
-          }
-          if ((typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') || ($scope.config.from_datetime == null) || !$scope.config.to_datetime) {
-            return false;
-          }
-          return true;
-        };
-        return blockSuccess = function(response) {
-          var booking;
-          booking = new BBModel.Admin.Booking(response);
-          BookingCollections.checkItems(booking);
-          $rootScope.$broadcast('refetchBookings');
-          return $scope.cancel();
-        };
-      }
-    };
-  });
-
-}).call(this);
-
-
-/***
-* @ngdoc directive
-* @name BBAdminBooking.directive:bbDateTimePicker
-* @scope
-* @restrict A
-*
-* @description
-* DateTime picker that combines date & timepicker and consolidates 
-* the Use of Moment.js in the App and Date in the pickers 
-*
-* @param {object}  date   A moment.js date object
-* @param {boolean}  showMeridian   Switch to show/hide meridian (optional, default:false)
-* @param {number}  minuteStep Step for the timepicker (optional, default:10)
-* @param {object}  minDate Min date value for datetimepicker
-* @param {object}  maxDate Max date value for datetimepicker
- */
-
-(function() {
-  angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
-    return {
-      scope: {
-        date: '=',
-        showMeridian: '=?',
-        minuteStep: '=?',
-        minDate: '=?',
-        maxDate: '=?'
-      },
-      restrict: 'A',
-      templateUrl: function(element, attrs) {
-        return PathSvc.directivePartial("_datetime_picker");
-      },
-      controller: function($scope, $filter, $timeout, GeneralOptions) {
-        var filterDate;
-        if (!$scope.minuteStep || typeof $scope.minuteStep === 'undefined') {
-          $scope.minuteStep = GeneralOptions.calendar_minute_step;
-        }
-        if (!$scope.showMeridian || typeof $scope.showMeridian === 'undefined') {
-          $scope.showMeridian = GeneralOptions.twelve_hour_format;
-        }
-        $scope.$watch('datetimeWithNoTz', function(newValue, oldValue) {
-          var assembledDate, maxDateClean, minDateDate;
-          newValue = new Date(newValue);
-          if ((newValue != null) && moment(newValue).isValid()) {
-            assembledDate = moment();
-            assembledDate.set({
-              'year': parseInt(newValue.getFullYear()),
-              'month': parseInt(newValue.getMonth()),
-              'date': parseInt(newValue.getDate()),
-              'hour': parseInt(newValue.getHours()),
-              'minute': parseInt(newValue.getMinutes()),
-              'second': 0
-            });
-            if ($scope.minDateClean != null) {
-              minDateDate = new Date($scope.minDateClean);
-              if ((newValue.getTime() / 1000) < (minDateDate.getTime() / 1000)) {
-                if (newValue.getFullYear() < minDateDate.getFullYear()) {
-                  assembledDate.year(parseInt(minDateDate.getFullYear()));
-                }
-                if (newValue.getMonth() < minDateDate.getMonth()) {
-                  assembledDate.month(parseInt(minDateDate.getMonth()));
-                }
-                if (newValue.getDate() < minDateDate.getDate()) {
-                  assembledDate.date(parseInt(minDateDate.getDate()));
-                }
-                if (newValue.getHours() < minDateDate.getHours()) {
-                  assembledDate.hours(parseInt(minDateDate.getHours()));
-                }
-                if (newValue.getMinutes() < minDateDate.getMinutes()) {
-                  assembledDate.minutes(parseInt(minDateDate.getMinutes()));
-                }
-                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
-              }
-            }
-            if ($scope.maxDateClean != null) {
-              maxDateClean = new Date($scope.maxDateClean);
-              if ((newValue.getTime() / 1000) > (maxDateClean.getTime() / 1000)) {
-                if (newValue.getFullYear() > minDateDate.getFullYear()) {
-                  assembledDate.year(parseInt(minDateDate.getFullYear()));
-                }
-                if (newValue.getMonth() > minDateDate.getMonth()) {
-                  assembledDate.month(parseInt(minDateDate.getMonth()));
-                }
-                if (newValue.getDate() > minDateDate.getDate()) {
-                  assembledDate.date(parseInt(minDateDate.getDate()));
-                }
-                if (newValue.getHours() > maxDateClean.getHours()) {
-                  assembledDate.hours(parseInt(maxDateClean.getHours()));
-                }
-                if (newValue.getMinutes() > maxDateClean.getMinutes()) {
-                  assembledDate.minutes(parseInt(maxDateClean.getMinutes()));
-                }
-                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
-              }
-            }
-            $scope.date = assembledDate.format();
-          }
-        });
-        $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
-        $scope.$watch('minDate', function(newValue, oldValue) {
-          if (newValue !== oldValue) {
-            return $scope.minDateClean = filterDate(newValue);
-          }
-        });
-        $scope.$watch('maxDate', function(newValue, oldValue) {
-          if (newValue !== oldValue) {
-            return $scope.maxDateClean = filterDate(newValue);
-          }
-        });
-        filterDate = function(date) {
-          if ((date != null) && moment(date).isValid()) {
-            return $filter('clearTimezone')(moment(date).format());
-          }
-          return null;
-        };
-        $scope.minDateClean = filterDate($scope.minDate);
-        return $scope.maxDateClean = filterDate($scope.maxDate);
-      }
     };
   });
 
