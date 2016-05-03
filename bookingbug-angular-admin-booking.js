@@ -79,7 +79,7 @@
     $rootScope.connection_started.then(function() {
       if ($scope.bb.item_defaults.pick_first_time) {
         $scope.switchView('next_available');
-      } else if ($scope.bb.current_item.defaults.time) {
+      } else if ($scope.bb.current_item.defaults.time != null) {
         $scope.switchView('day');
       } else {
         $scope.switchView('multi_day');
@@ -341,33 +341,13 @@
     return {
       scope: true,
       restrict: 'A',
-      controller: function($scope, $element, $attrs, AdminPersonService, AdminResourceService, BBModel, BookingCollections, $rootScope) {
+      controller: function($scope, $element, $attrs, AdminPersonService, AdminResourceService, BBModel, BookingCollections, $rootScope, BBAssets) {
         var blockSuccess, isValid;
         $scope.resources = [];
-        if ($scope.bb.current_item.company.$has('people')) {
-          $scope.bb.current_item.company.getPeoplePromise().then(function(people) {
-            var i, len, p;
-            for (i = 0, len = people.length; i < len; i++) {
-              p = people[i];
-              p.title = p.name;
-              p.identifier = p.id + '_p';
-              p.group = 'Staff';
-            }
-            return $scope.resources = _.union($scope.resources, people);
-          });
-        }
-        if ($scope.bb.current_item.company.$has('resources')) {
-          $scope.bb.current_item.company.getResourcesPromise().then(function(resources) {
-            var i, len, r;
-            for (i = 0, len = resources.length; i < len; i++) {
-              r = resources[i];
-              r.title = r.name;
-              r.identifier = r.id + '_r';
-              r.group = 'Resources ';
-            }
-            return $scope.resources = _.union($scope.resources, resources);
-          });
-        }
+        BBAssets($scope.bb.company).then(function(assets) {
+          return $scope.resources = assets;
+        });
+        $scope.hideBlockAllDay = Math.abs($scope.config.from_datetime.diff($scope.config.to_datetime, 'days')) > 0;
         if (($scope.bb.current_item.person != null) && ($scope.bb.current_item.person.id != null)) {
           $scope.picked_resource = $scope.bb.current_item.person.id + '_p';
         }
