@@ -707,7 +707,7 @@
 * @name GeneralOptionsProvider
 *
 * @description
-* Provider 
+* Provider
 *
 * @example
   <example>
@@ -723,7 +723,10 @@
       var options;
       options = {
         twelve_hour_format: false,
-        calendar_minute_step: 10
+        calendar_minute_step: 10,
+        calendar_min_time: "09:00",
+        calendar_max_time: "18:00",
+        calendar_slot_duration: 5
       };
       this.setOption = function(option, value) {
         if (options.hasOwnProperty(option)) {
