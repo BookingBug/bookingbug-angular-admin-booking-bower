@@ -1,18 +1,13 @@
-#bb [bb-calendar-admin] .bb-day-nav {
+#bb [bb-admin-calendar] .bb-day-nav, #bb .bb-admin-calendar .bb-day-nav {
   text-align: center; }
 
-#bb [bb-calendar-admin] .btn-day-nav {
-  color: #333; }
-  #bb [bb-calendar-admin] .btn-day-nav:hover {
-    color: #000; }
-
-#bb [bb-calendar-admin] .bb-day-nav-heading {
+#bb [bb-admin-calendar] .bb-day-nav-heading, #bb .bb-admin-calendar .bb-day-nav-heading {
   display: inline-block;
   margin-bottom: 0;
   font-size: 18px;
   padding: 15px 0 15px 0; }
 
-#bb [bb-calendar-admin] .bb-filter-icon {
+#bb [bb-admin-calendar] .bb-filter-icon, #bb .bb-admin-calendar .bb-filter-icon {
   height: 33px;
   padding-right: 5px;
   display: inline-block;

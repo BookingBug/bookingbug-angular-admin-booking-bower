@@ -56,16 +56,16 @@
 
 (function() {
   'use strict';
-  angular.module('BB.Directives').directive('bbCalendarAdmin', function() {
+  angular.module('BB.Directives').directive('bbAdminCalendar', function() {
     return {
       restrict: 'AE',
       replace: true,
       scope: true,
-      controller: 'calendarAdminCtrl'
+      controller: 'adminCalendarCtrl'
     };
   });
 
-  angular.module('BB.Controllers').controller('calendarAdminCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel, $rootScope) {
+  angular.module('BB.Controllers').controller('adminCalendarCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel, $rootScope) {
     angular.extend(this, $controller('TimeList', {
       $scope: $scope,
       $attrs: $attrs,
@@ -192,7 +192,15 @@
           $scope.setLoaded($scope);
           return $scope.selectClient(client, route);
         }, function(err) {
-          return $scope.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
+          if (err.data && err.data.error === "Please Login") {
+            $scope.setLoaded($scope);
+            return AlertService.raise('EMAIL_ALREADY_REGISTERED_ADMIN');
+          } else if (err.data && err.data.error === "Sorry, it appears that this phone number already exists") {
+            $scope.setLoaded($scope);
+            return AlertService.raise('PHONE_NUMBER_ALREADY_REGISTERED_ADMIN');
+          } else {
+            return $scope.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
+          }
         });
       };
     })(this);
