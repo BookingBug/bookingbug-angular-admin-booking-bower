@@ -13,45 +13,19 @@
   display: inline-block;
   vertical-align: middle; }
 
-#bb .bb-admin-client {
-  text-align: left; }
-  #bb .bb-admin-client .page-intro {
-    text-align: center; }
-  #bb .bb-admin-client .section-title {
-    text-align: center; }
-  #bb .bb-admin-client .bb-button-headers {
-    margin-bottom: 70px;
-    border-bottom: 1px solid #999; }
-    #bb .bb-admin-client .bb-button-headers button {
-      border-color: #bbb;
-      border-radius: 15px;
-      border-bottom-left-radius: 0px;
-      border-bottom-right-radius: 0px; }
-  #bb .bb-admin-client tfoot {
-    display: none; }
-
-#bb .admin-typehead {
-  padding-left: 5px;
-  border-radius: 5px;
-  border: 1px #D5D5D5 solid;
-  font-size: 18px; }
-
-#bb .admin-typehead-wrapper {
-  padding-right: 5px;
-  margin-bottom: 20px;
-  padding-left: 15px;
-  padding-right: 15px; }
-  #bb .admin-typehead-wrapper .dropdown-menu {
+#bb .bb-admin-client .admin-typehead-wrapper, #bb [bb-admin-booking-clients] .admin-typehead-wrapper {
+  margin-bottom: 20px; }
+  #bb .bb-admin-client .admin-typehead-wrapper .dropdown-menu, #bb [bb-admin-booking-clients] .admin-typehead-wrapper .dropdown-menu {
     max-height: 500px;
     overflow: auto; }
-    #bb .admin-typehead-wrapper .dropdown-menu .typeahead_match {
+    #bb .bb-admin-client .admin-typehead-wrapper .dropdown-menu .typeahead_match, #bb [bb-admin-booking-clients] .admin-typehead-wrapper .dropdown-menu .typeahead_match {
       border-bottom: 1px solid #999;
       padding: 3px; }
-      #bb .admin-typehead-wrapper .dropdown-menu .typeahead_match:hover {
+      #bb .bb-admin-client .admin-typehead-wrapper .dropdown-menu .typeahead_match:hover, #bb [bb-admin-booking-clients] .admin-typehead-wrapper .dropdown-menu .typeahead_match:hover {
         background-color: #CCC;
         cursor: pointer; }
 
-#bb .typehead-client-wrapper {
+#bb .bb-admin-client .typehead-client-wrapper, #bb [bb-admin-booking-clients] .typehead-client-wrapper {
   border: 1px solid #D5D5D5;
   border-bottom: 0;
   border-left: 0;
@@ -59,35 +33,42 @@
   padding-top: 10px;
   padding-bottom: 10px; }
 
-#bb .panel-client-close {
+#bb .bb-admin-client .panel-client-close, #bb [bb-admin-booking-clients] .panel-client-close {
   padding-top: 2px;
   float: right; }
-  #bb .panel-client-close:hover {
+  #bb .bb-admin-client .panel-client-close:hover, #bb [bb-admin-booking-clients] .panel-client-close:hover {
     transition: 0.5s;
     transform: scale(1.25); }
 
-#bb .btn-search-anyway {
-  padding-top: 13px;
-  padding-bottom: 14px; }
-
-#bb .admin-form-submit {
+#bb .bb-admin-client .admin-form-submit, #bb [bb-admin-booking-clients] .admin-form-submit {
   margin-top: 20px; }
 
-#bb .search-results {
+#bb .bb-admin-client .search-results, #bb [bb-admin-booking-clients] .search-results {
   margin-top: 40px; }
 
-#bb .typehead-results-wrapper {
+#bb .bb-admin-client .typehead-results-wrapper, #bb [bb-admin-booking-clients] .typehead-results-wrapper {
   font-size: 18px;
   padding: 0;
   padding-left: 10px;
   padding-right: 10px;
-  padding-top: 20px;
+  padding-top: 10px;
+  padding-bottom: 10px;
   border: 1px solid #D5D5D5;
   border-top: 0px; }
 
-#bb .admin-typehead .dropdown-menu {
+#bb .bb-admin-client .admin-typehead .dropdown-menu, #bb [bb-admin-booking-clients] .admin-typehead .dropdown-menu {
   max-height: 500px;
   overflow: auto; }
+
+#bb .bb-admin-client .dropdown-menu .active, #bb [bb-admin-booking-clients] .dropdown-menu .active {
+  background-color: #609ABE;
+  color: white; }
+
+#bb .bb-admin-client .icon-padding, #bb [bb-admin-booking-clients] .icon-padding {
+  padding-left: 10px; }
+
+#bb .bb-admin-client .typh-header, #bb [bb-admin-booking-clients] .typh-header {
+  font-size: 22px; }
 
 #bb .bb-date-picker [timepicker] {
   margin-top: -32px; }

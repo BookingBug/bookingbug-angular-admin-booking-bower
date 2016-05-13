@@ -258,9 +258,10 @@
       model = $model;
       label = $label;
       $scope.client = item;
+      $scope.selectClient($item);
     };
     $scope.clearSearch = function() {
-      $scope.clients = null;
+      $scope.clients = [];
       return $scope.search_triggered = false;
     };
     return $scope.edit = function(item) {
