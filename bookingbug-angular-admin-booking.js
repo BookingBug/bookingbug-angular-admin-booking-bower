@@ -77,6 +77,9 @@
       multi_day: false
     };
     $rootScope.connection_started.then(function() {
+      return $scope.initialise();
+    });
+    $scope.initialise = function() {
       if ($scope.bb.item_defaults.pick_first_time) {
         $scope.switchView('next_available');
       } else if ($scope.bb.current_item.defaults.time != null) {
@@ -90,7 +93,7 @@
       if ($scope.bb.current_item.resource) {
         return $scope.resource_name = $scope.bb.current_item.resource.name;
       }
-    });
+    };
     $scope.switchView = function(view) {
       var key, ref, value;
       ref = $scope.calendar_view;
