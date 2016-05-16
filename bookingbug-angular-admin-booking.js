@@ -26,6 +26,35 @@
 }).call(this);
 
 (function() {
+  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    hasProp = {}.hasOwnProperty;
+
+  window.Collection.Client = (function(superClass) {
+    extend(Client, superClass);
+
+    function Client() {
+      return Client.__super__.constructor.apply(this, arguments);
+    }
+
+    Client.prototype.checkItem = function(item) {
+      return Client.__super__.checkItem.apply(this, arguments);
+    };
+
+    return Client;
+
+  })(window.Collection.Base);
+
+  angular.module('BB.Services').provider("ClientCollections", function() {
+    return {
+      $get: function() {
+        return new window.BaseCollections();
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
   'use strict';
   angular.module('BB.Directives').directive('bbAdminCalendar', function() {
     return {
@@ -99,55 +128,37 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, ClientDetailsService, AlertService, ClientService, ValidatorService, ErrorService, $log, PaginationService) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, AlertService, ClientService, ValidatorService, ErrorService, $log, PaginationService) {
     $scope.validator = ValidatorService;
-    $scope.clientDef = $q.defer();
-    $scope.clientPromise = $scope.clientDef.promise;
-    $scope.per_page = 20;
-    $scope.total_entries = 0;
     $scope.clients = [];
-    $scope.search_clients = false;
-    $scope.newClient = false;
-    $scope.no_clients = false;
-    $scope.search_error = false;
-    $scope.search_text = null;
     $scope.pagination = PaginationService.initialise({
       page_size: 10,
       max_size: 5
     });
-    $scope.showSearch = (function(_this) {
-      return function() {
-        $scope.search_clients = true;
-        return $scope.newClient = false;
-      };
-    })(this);
-    $scope.showClientForm = (function(_this) {
-      return function() {
-        $scope.search_error = false;
-        $scope.no_clients = false;
-        $scope.search_clients = false;
-        $scope.newClient = true;
-        return $scope.clearClient();
-      };
-    })(this);
+    $scope.sort_by_options = [
+      {
+        key: 'first_name',
+        name: 'First Name'
+      }, {
+        key: 'last_name',
+        name: 'Last Name'
+      }, {
+        key: 'mobile',
+        name: 'Mobile'
+      }, {
+        key: 'phone',
+        name: 'Phone'
+      }
+    ];
+    $scope.sort_by = $scope.sort_by_options[0].key;
+    $rootScope.connection_started.then(function() {
+      return $scope.clearClient();
+    });
     $scope.selectClient = (function(_this) {
       return function(client, route) {
-        $scope.search_error = false;
-        $scope.no_clients = false;
         $scope.setClient(client);
         $scope.client.setValid(true);
         return $scope.decideNextPage(route);
-      };
-    })(this);
-    $scope.checkSearch = (function(_this) {
-      return function() {
-        if ($scope.search_text && $scope.search_text.length >= 3) {
-          $scope.search_error = false;
-          return true;
-        } else {
-          $scope.search_error = true;
-          return false;
-        }
       };
     })(this);
     $scope.createClient = (function(_this) {
@@ -175,53 +186,48 @@
         });
       };
     })(this);
-    $scope.getClients = function(currentPage, filterBy, filterByFields, orderBy, orderByReverse) {
-      var clientDef, params;
-      AlertService.clear();
-      $scope.search_triggered = true;
-      $scope.no_clients = false;
-      $scope.search_error = false;
-      clientDef = $q.defer();
+    $scope.getClients = function(current_page, filter_by, filter_by_fields, order_by, order_by_reverse) {
+      var params, params2, promises;
       params = {
         company: $scope.bb.company,
-        per_page: $scope.per_page,
-        filter_by: filterBy != null ? filterBy : $scope.search_text,
-        filter_by_fields: filterByFields,
-        order_by: orderBy,
-        order_by_reverse: orderByReverse
+        per_page: 100,
+        filter_by: filter_by,
+        order_by: order_by,
+        order_by_reverse: order_by_reverse
       };
-      if (currentPage) {
-        params.page = currentPage + 1;
-      }
+      params2 = {
+        company: $scope.bb.company,
+        per_page: 100,
+        filter_by_fields: 'mobile,' + filter_by,
+        order_by: order_by,
+        order_by_reverse: order_by_reverse
+      };
       $scope.notLoaded($scope);
-      if (!$rootScope.bb.api_url && $scope.bb.api_url) {
-        $rootScope.bb.api_url = $scope.bb.api_url;
-      }
-      return AdminClientService.query(params).then((function(_this) {
-        return function(clients) {
-          $scope.clients = clients.items;
-          $scope.setLoaded($scope);
-          $scope.setPageLoaded();
-          $scope.total_entries = clients.total_entries;
-          PaginationService.update($scope.pagination, $scope.clients.length);
-          return clientDef.resolve(clients.items);
-        };
-      })(this));
+      promises = [];
+      promises.push(AdminClientService.query(params));
+      promises.push(AdminClientService.query(params2));
+      return $q.all(promises).then(function(result) {
+        $scope.search_complete = true;
+        $scope.clients = _.union(result[0].items, result[1].items);
+        $scope.setLoaded($scope);
+        $scope.setPageLoaded();
+        return PaginationService.update($scope.pagination, $scope.clients.length);
+      });
     };
     $scope.searchClients = function(search_text) {
-      var clientDef, params;
-      clientDef = $q.defer();
+      var defer, params;
+      defer = $q.defer();
       params = {
         filter_by: search_text,
         company: $scope.bb.company
       };
       AdminClientService.query(params).then((function(_this) {
         return function(clients) {
-          clientDef.resolve(clients.items);
+          defer.resolve(clients.items);
           return clients.items;
         };
       })(this));
-      return clientDef.promise;
+      return defer.promise;
     };
     $scope.typeHeadResults = function($item, $model, $label) {
       var item, label, model;
@@ -229,43 +235,15 @@
       model = $model;
       label = $label;
       $scope.client = item;
-      $scope.selectClient($item);
+      return $scope.selectClient($item);
     };
     $scope.clearSearch = function() {
       $scope.clients = [];
-      return $scope.search_triggered = false;
+      $scope.typehead_result = null;
+      return $scope.search_complete = false;
     };
     return $scope.edit = function(item) {
       return $log.info("not implemented");
-    };
-  });
-
-}).call(this);
-
-(function() {
-  var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    hasProp = {}.hasOwnProperty;
-
-  window.Collection.Client = (function(superClass) {
-    extend(Client, superClass);
-
-    function Client() {
-      return Client.__super__.constructor.apply(this, arguments);
-    }
-
-    Client.prototype.checkItem = function(item) {
-      return Client.__super__.checkItem.apply(this, arguments);
-    };
-
-    return Client;
-
-  })(window.Collection.Base);
-
-  angular.module('BB.Services').provider("ClientCollections", function() {
-    return {
-      $get: function() {
-        return new window.BaseCollections();
-      }
     };
   });
 

@@ -13,62 +13,55 @@
   display: inline-block;
   vertical-align: middle; }
 
-#bb .bb-admin-client .admin-typehead-wrapper, #bb [bb-admin-booking-clients] .admin-typehead-wrapper {
+#bb [bb-admin-booking-clients] .bb-admin-typehead-wrapper {
   margin-bottom: 20px; }
-  #bb .bb-admin-client .admin-typehead-wrapper .dropdown-menu, #bb [bb-admin-booking-clients] .admin-typehead-wrapper .dropdown-menu {
+  #bb [bb-admin-booking-clients] .bb-admin-typehead-wrapper .dropdown-menu {
     max-height: 500px;
     overflow: auto; }
-    #bb .bb-admin-client .admin-typehead-wrapper .dropdown-menu .typeahead_match, #bb [bb-admin-booking-clients] .admin-typehead-wrapper .dropdown-menu .typeahead_match {
+    #bb [bb-admin-booking-clients] .bb-admin-typehead-wrapper .dropdown-menu .typeahead_match {
       border-bottom: 1px solid #999;
       padding: 3px; }
-      #bb .bb-admin-client .admin-typehead-wrapper .dropdown-menu .typeahead_match:hover, #bb [bb-admin-booking-clients] .admin-typehead-wrapper .dropdown-menu .typeahead_match:hover {
+      #bb [bb-admin-booking-clients] .bb-admin-typehead-wrapper .dropdown-menu .typeahead_match:hover {
         background-color: #CCC;
         cursor: pointer; }
 
-#bb .bb-admin-client .typehead-client-wrapper, #bb [bb-admin-booking-clients] .typehead-client-wrapper {
+#bb [bb-admin-booking-clients] .bb-typehead-results-wrapper {
+  padding: 10px 15px 5px;
   border: 1px solid #D5D5D5;
-  border-bottom: 0;
-  border-left: 0;
-  border-right: 0;
-  padding-top: 10px;
-  padding-bottom: 10px; }
+  border-top: 0px;
+  min-width: 300px;
+  cursor: pointer; }
 
-#bb .bb-admin-client .panel-client-close, #bb [bb-admin-booking-clients] .panel-client-close {
-  padding-top: 2px;
-  float: right; }
-  #bb .bb-admin-client .panel-client-close:hover, #bb [bb-admin-booking-clients] .panel-client-close:hover {
-    transition: 0.5s;
-    transform: scale(1.25); }
-
-#bb .bb-admin-client .admin-form-submit, #bb [bb-admin-booking-clients] .admin-form-submit {
-  margin-top: 20px; }
-
-#bb .bb-admin-client .search-results, #bb [bb-admin-booking-clients] .search-results {
-  margin-top: 40px; }
-
-#bb .bb-admin-client .typehead-results-wrapper, #bb [bb-admin-booking-clients] .typehead-results-wrapper {
-  font-size: 18px;
-  padding: 0;
-  padding-left: 10px;
-  padding-right: 10px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  border: 1px solid #D5D5D5;
-  border-top: 0px; }
-
-#bb .bb-admin-client .admin-typehead .dropdown-menu, #bb [bb-admin-booking-clients] .admin-typehead .dropdown-menu {
+#bb [bb-admin-booking-clients] .admin-typehead .dropdown-menu {
   max-height: 500px;
   overflow: auto; }
 
-#bb .bb-admin-client .dropdown-menu .active, #bb [bb-admin-booking-clients] .dropdown-menu .active {
-  background-color: #609ABE;
-  color: white; }
+#bb [bb-admin-booking-clients] .dropdown-menu {
+  padding: 0; }
+  #bb [bb-admin-booking-clients] .dropdown-menu .active {
+    background-color: #609ABE;
+    color: white; }
 
-#bb .bb-admin-client .icon-padding, #bb [bb-admin-booking-clients] .icon-padding {
-  padding-left: 10px; }
+#bb [bb-admin-booking-clients] .search-results {
+  margin-top: 30px; }
 
-#bb .bb-admin-client .typh-header, #bb [bb-admin-booking-clients] .typh-header {
-  font-size: 22px; }
+#bb [bb-admin-booking-clients] .fa-mobile.fa-lg.fa-fw {
+  width: 17px; }
+
+#bb [bb-admin-booking-clients] .bb-typh-header {
+  font-size: 20px; }
+
+#bb [bb-admin-booking-clients] .btn-select-client {
+  margin-top: 14px; }
+
+#bb [bb-admin-booking-clients] .bb-search-options {
+  text-align: right; }
+
+#bb [bb-admin-booking-clients] .bb-search-summary {
+  line-height: 34px;
+  font-size: 18px;
+  font-weight: bold;
+  display: inline-block; }
 
 #bb .bb-date-picker [timepicker] {
   margin-top: -32px; }
