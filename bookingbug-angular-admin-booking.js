@@ -146,6 +146,9 @@
         key: 'last_name',
         name: 'Last Name'
       }, {
+        key: 'email',
+        name: 'Email'
+      }, {
         key: 'mobile',
         name: 'Mobile'
       }, {
@@ -189,32 +192,33 @@
         });
       };
     })(this);
-    $scope.getClients = function(current_page, filter_by, filter_by_fields, order_by, order_by_reverse) {
-      var params, params2, promises;
-      params = {
+    $scope.getClients = function(params, options) {
+      if (options == null) {
+        options = {};
+      }
+      if (!params) {
+        return;
+      }
+      $scope.params = {
         company: $scope.bb.company,
-        per_page: 100,
-        filter_by: filter_by,
-        order_by: order_by,
-        order_by_reverse: order_by_reverse
-      };
-      params2 = {
-        company: $scope.bb.company,
-        per_page: 100,
-        filter_by_fields: 'mobile,' + filter_by,
-        order_by: order_by,
-        order_by_reverse: order_by_reverse
+        per_page: 10,
+        filter_by: params.filter_by,
+        search_by_fields: 'phone,mobile',
+        order_by: params.order_by,
+        order_by_reverse: params.order_by_reverse,
+        page: params.page ? params.page : 1
       };
       $scope.notLoaded($scope);
-      promises = [];
-      promises.push(AdminClientService.query(params));
-      promises.push(AdminClientService.query(params2));
-      return $q.all(promises).then(function(result) {
+      return AdminClientService.query($scope.params).then(function(result) {
         $scope.search_complete = true;
-        $scope.clients = _.union(result[0].items, result[1].items);
+        if (options.append) {
+          $scope.clients = $scope.clients.concat(result.items);
+        } else {
+          $scope.clients = result.items;
+        }
+        PaginationService.update($scope.pagination, result.total_entries);
         $scope.setLoaded($scope);
-        $scope.setPageLoaded();
-        return PaginationService.update($scope.pagination, $scope.clients.length);
+        return $scope.setPageLoaded();
       });
     };
     $scope.searchClients = function(search_text) {
@@ -245,8 +249,16 @@
       $scope.typehead_result = null;
       return $scope.search_complete = false;
     };
-    return $scope.edit = function(item) {
+    $scope.edit = function(item) {
       return $log.info("not implemented");
+    };
+    return $scope.pageChanged = function() {
+      if (PaginationService.checkItems($scope.pagination, $scope.clients.length)) {
+        $scope.params.page = $scope.pagination.current_page;
+        return $scope.getClients($scope.params, {
+          append: true
+        });
+      }
     };
   });
 
