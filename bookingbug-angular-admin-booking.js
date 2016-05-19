@@ -385,14 +385,16 @@
           if (typeof $scope.bb.current_item.person === 'object') {
             return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
               start_time: $scope.config.from_datetime,
-              end_time: $scope.config.to_datetime
+              end_time: $scope.config.to_datetime,
+              booking: true
             }).then(function(response) {
               return blockSuccess(response);
             });
           } else if (typeof $scope.bb.current_item.resource === 'object') {
             return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.person, {
               start_time: $scope.config.from_datetime,
-              end_time: $scope.config.to_datetime
+              end_time: $scope.config.to_datetime,
+              booking: true
             }).then(function(response) {
               return blockSuccess(response);
             });
@@ -409,9 +411,6 @@
           return true;
         };
         blockSuccess = function(response) {
-          var booking;
-          booking = new BBModel.Admin.Booking(response);
-          BookingCollections.checkItems(booking);
           $rootScope.$broadcast('refetchBookings');
           return $scope.cancel();
         };
