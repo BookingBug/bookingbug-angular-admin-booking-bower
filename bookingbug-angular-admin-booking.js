@@ -337,6 +337,12 @@
         BBAssets($scope.bb.company).then(function(assets) {
           return $scope.resources = assets;
         });
+        if (!moment.isMoment($scope.config.to_datetime)) {
+          $scope.config.to_datetime = moment($scope.config.to_datetime);
+        }
+        if (!moment.isMoment($scope.config.from_datetime)) {
+          $scope.config.from_datetime = moment($scope.config.from_datetime);
+        }
         $scope.hideBlockAllDay = Math.abs($scope.config.from_datetime.diff($scope.config.to_datetime, 'days')) > 0;
         if (($scope.bb.current_item.person != null) && ($scope.bb.current_item.person.id != null)) {
           $scope.picked_resource = $scope.bb.current_item.person.id + '_p';
@@ -409,129 +415,53 @@
 
 }).call(this);
 
-
-/***
-* @ngdoc directive
-* @name BBAdminBooking.directive:bbDateTimePicker
-* @scope
-* @restrict A
-*
-* @description
-* DateTime picker that combines date & timepicker and consolidates 
-* the Use of Moment.js in the App and Date in the pickers 
-*
-* @param {object}  date   A moment.js date object
-* @param {boolean}  showMeridian   Switch to show/hide meridian (optional, default:false)
-* @param {number}  minuteStep Step for the timepicker (optional, default:10)
-* @param {object}  minDate Min date value for datetimepicker
-* @param {object}  maxDate Max date value for datetimepicker
- */
-
 (function() {
-  angular.module('BBAdminBooking').directive('bbDateTimePicker', function(PathSvc) {
-    return {
-      scope: {
-        date: '=',
-        showMeridian: '=?',
-        minuteStep: '=?',
-        minDate: '=?',
-        maxDate: '=?'
-      },
-      restrict: 'A',
-      templateUrl: function(element, attrs) {
-        return PathSvc.directivePartial("_datetime_picker");
-      },
-      controller: function($scope, $filter, $timeout, GeneralOptions) {
-        var filterDate;
-        if (!$scope.minuteStep || typeof $scope.minuteStep === 'undefined') {
-          $scope.minuteStep = GeneralOptions.calendar_minute_step;
-        }
-        if (!$scope.showMeridian || typeof $scope.showMeridian === 'undefined') {
-          $scope.showMeridian = GeneralOptions.twelve_hour_format;
-        }
-        $scope.$watch('datetimeWithNoTz', function(newValue, oldValue) {
-          var assembledDate, maxDateClean, minDateDate;
-          newValue = new Date(newValue);
-          if ((newValue != null) && moment(newValue).isValid()) {
-            assembledDate = moment();
-            assembledDate.set({
-              'year': parseInt(newValue.getFullYear()),
-              'month': parseInt(newValue.getMonth()),
-              'date': parseInt(newValue.getDate()),
-              'hour': parseInt(newValue.getHours()),
-              'minute': parseInt(newValue.getMinutes()),
-              'second': 0
-            });
-            if ($scope.minDateClean != null) {
-              minDateDate = new Date($scope.minDateClean);
-              if ((newValue.getTime() / 1000) < (minDateDate.getTime() / 1000)) {
-                if (newValue.getFullYear() < minDateDate.getFullYear()) {
-                  assembledDate.year(parseInt(minDateDate.getFullYear()));
-                }
-                if (newValue.getMonth() < minDateDate.getMonth()) {
-                  assembledDate.month(parseInt(minDateDate.getMonth()));
-                }
-                if (newValue.getDate() < minDateDate.getDate()) {
-                  assembledDate.date(parseInt(minDateDate.getDate()));
-                }
-                if (newValue.getHours() < minDateDate.getHours()) {
-                  assembledDate.hours(parseInt(minDateDate.getHours()));
-                }
-                if (newValue.getMinutes() < minDateDate.getMinutes()) {
-                  assembledDate.minutes(parseInt(minDateDate.getMinutes()));
-                }
-                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
-              }
-            }
-            if ($scope.maxDateClean != null) {
-              maxDateClean = new Date($scope.maxDateClean);
-              if ((newValue.getTime() / 1000) > (maxDateClean.getTime() / 1000)) {
-                if (newValue.getFullYear() > minDateDate.getFullYear()) {
-                  assembledDate.year(parseInt(minDateDate.getFullYear()));
-                }
-                if (newValue.getMonth() > minDateDate.getMonth()) {
-                  assembledDate.month(parseInt(minDateDate.getMonth()));
-                }
-                if (newValue.getDate() > minDateDate.getDate()) {
-                  assembledDate.date(parseInt(minDateDate.getDate()));
-                }
-                if (newValue.getHours() > maxDateClean.getHours()) {
-                  assembledDate.hours(parseInt(maxDateClean.getHours()));
-                }
-                if (newValue.getMinutes() > maxDateClean.getMinutes()) {
-                  assembledDate.minutes(parseInt(maxDateClean.getMinutes()));
-                }
-                $scope.datetimeWithNoTz = $filter('clearTimezone')(assembledDate.format());
-              }
-            }
-            $scope.date = assembledDate.format();
-          }
-        });
-        $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
-        $scope.$watch('date', function(newValue, oldValue) {
-          if (newValue !== oldValue) {
-            return $scope.datetimeWithNoTz = $filter('clearTimezone')(moment($scope.date).format());
-          }
-        });
-        $scope.$watch('minDate', function(newValue, oldValue) {
-          if (newValue !== oldValue) {
-            return $scope.minDateClean = filterDate(newValue);
-          }
-        });
-        $scope.$watch('maxDate', function(newValue, oldValue) {
-          if (newValue !== oldValue) {
-            return $scope.maxDateClean = filterDate(newValue);
-          }
-        });
-        filterDate = function(date) {
-          if ((date != null) && moment(date).isValid()) {
-            return $filter('clearTimezone')(moment(date).format());
-          }
-          return null;
-        };
-        $scope.minDateClean = filterDate($scope.minDate);
-        return $scope.maxDateClean = filterDate($scope.maxDate);
+  angular.module('BB.Filters').filter('in_the_future', function() {
+    return function(slots) {
+      var now_tod, tim;
+      tim = moment();
+      now_tod = tim.minutes() + tim.hours() * 60;
+      return _.filter(slots, function(x) {
+        return x.time > now_tod;
+      });
+    };
+  });
+
+  angular.module('BB.Filters').filter('tod_from_now', function() {
+    return function(tod, options) {
+      var hour_string, hours, min_string, mins, now_tod, seperator, str, tim, v, val;
+      tim = moment();
+      now_tod = tim.minutes() + tim.hours() * 60;
+      v = tod - now_tod;
+      hour_string = options && options.abbr_units ? "hr" : "hour";
+      min_string = options && options.abbr_units ? "min" : "minute";
+      seperator = options && angular.isString(options.seperator) ? options.seperator : "and";
+      val = parseInt(v);
+      if (val < 60) {
+        return val + " " + min_string + "s";
       }
+      hours = parseInt(val / 60);
+      mins = val % 60;
+      if (mins === 0) {
+        if (hours === 1) {
+          return "1 " + hour_string;
+        } else {
+          return hours + " " + hour_string + "s";
+        }
+      } else {
+        str = hours + " " + hour_string;
+        if (hours > 1) {
+          str += "s";
+        }
+        if (mins === 0) {
+          return str;
+        }
+        if (seperator.length > 0) {
+          str += " " + seperator;
+        }
+        str += " " + mins + " " + min_string + "s";
+      }
+      return str;
     };
   });
 
@@ -631,57 +561,6 @@
 
 /*
 * @ngdoc service
-* @module BBAdminBooking
-* @name GeneralOptions
-*
-* @description
-* Returns a set of General configuration options
- */
-
-
-/*
-* @ngdoc service
-* @module BBAdminBooking
-* @name GeneralOptionsProvider
-*
-* @description
-* Provider
-*
-* @example
-  <example>
-  angular.module('ExampleModule').config ['GeneralOptionsProvider', (GeneralOptionsProvider) ->
-    GeneralOptionsProvider.setOption('twelve_hour_format', true)
-  ]
-  </example>
- */
-
-(function() {
-  angular.module('BBAdminBooking').provider('GeneralOptions', [
-    function() {
-      var options;
-      options = {
-        twelve_hour_format: false,
-        calendar_minute_step: 10,
-        calendar_min_time: "09:00",
-        calendar_max_time: "18:00",
-        calendar_slot_duration: 5
-      };
-      this.setOption = function(option, value) {
-        if (options.hasOwnProperty(option)) {
-          options[option] = value;
-        }
-      };
-      this.$get = function() {
-        return options;
-      };
-    }
-  ]);
-
-}).call(this);
-
-
-/*
-* @ngdoc service
 * @name BBAdminBooking.service:ProcessAssetsFilter
 * @description
 * Returns array of assets from a comma delimited string
@@ -703,57 +582,5 @@
       return assets;
     }
   ]);
-
-}).call(this);
-
-(function() {
-  angular.module('BB.Filters').filter('in_the_future', function() {
-    return function(slots) {
-      var now_tod, tim;
-      tim = moment();
-      now_tod = tim.minutes() + tim.hours() * 60;
-      return _.filter(slots, function(x) {
-        return x.time > now_tod;
-      });
-    };
-  });
-
-  angular.module('BB.Filters').filter('tod_from_now', function() {
-    return function(tod, options) {
-      var hour_string, hours, min_string, mins, now_tod, seperator, str, tim, v, val;
-      tim = moment();
-      now_tod = tim.minutes() + tim.hours() * 60;
-      v = tod - now_tod;
-      hour_string = options && options.abbr_units ? "hr" : "hour";
-      min_string = options && options.abbr_units ? "min" : "minute";
-      seperator = options && angular.isString(options.seperator) ? options.seperator : "and";
-      val = parseInt(v);
-      if (val < 60) {
-        return val + " " + min_string + "s";
-      }
-      hours = parseInt(val / 60);
-      mins = val % 60;
-      if (mins === 0) {
-        if (hours === 1) {
-          return "1 " + hour_string;
-        } else {
-          return hours + " " + hour_string + "s";
-        }
-      } else {
-        str = hours + " " + hour_string;
-        if (hours > 1) {
-          str += "s";
-        }
-        if (mins === 0) {
-          return str;
-        }
-        if (seperator.length > 0) {
-          str += " " + seperator;
-        }
-        str += " " + mins + " " + min_string + "s";
-      }
-      return str;
-    };
-  });
 
 }).call(this);
