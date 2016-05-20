@@ -109,11 +109,11 @@
         time: $scope.bb.current_item.defaults.time,
         avail: 1
       });
-      if ($scope.selected_day) {
-        $scope.setLastSelectedDate($scope.selected_day.date);
-        $scope.bb.current_item.setDate($scope.selected_day);
-      }
+      $scope.setLastSelectedDate(new_day.date);
+      $scope.bb.current_item.setDate(new_day);
       $scope.bb.current_item.setTime(new_timeslot);
+      $scope.bb.current_item.setPerson($scope.bb.current_item.defaults.person);
+      $scope.bb.current_item.setResource($scope.bb.current_item.defaults.resource);
       return $scope.decideNextPage();
     };
   });
@@ -427,6 +427,58 @@
 }).call(this);
 
 (function() {
+  angular.module('BB.Filters').filter('in_the_future', function() {
+    return function(slots) {
+      var now_tod, tim;
+      tim = moment();
+      now_tod = tim.minutes() + tim.hours() * 60;
+      return _.filter(slots, function(x) {
+        return x.time > now_tod;
+      });
+    };
+  });
+
+  angular.module('BB.Filters').filter('tod_from_now', function() {
+    return function(tod, options) {
+      var hour_string, hours, min_string, mins, now_tod, seperator, str, tim, v, val;
+      tim = moment();
+      now_tod = tim.minutes() + tim.hours() * 60;
+      v = tod - now_tod;
+      hour_string = options && options.abbr_units ? "hr" : "hour";
+      min_string = options && options.abbr_units ? "min" : "minute";
+      seperator = options && angular.isString(options.seperator) ? options.seperator : "and";
+      val = parseInt(v);
+      if (val < 60) {
+        return val + " " + min_string + "s";
+      }
+      hours = parseInt(val / 60);
+      mins = val % 60;
+      if (mins === 0) {
+        if (hours === 1) {
+          return "1 " + hour_string;
+        } else {
+          return hours + " " + hour_string + "s";
+        }
+      } else {
+        str = hours + " " + hour_string;
+        if (hours > 1) {
+          str += "s";
+        }
+        if (mins === 0) {
+          return str;
+        }
+        if (seperator.length > 0) {
+          str += " " + seperator;
+        }
+        str += " " + mins + " " + min_string + "s";
+      }
+      return str;
+    };
+  });
+
+}).call(this);
+
+(function() {
   angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
     return {
       open: function(config) {
@@ -541,57 +593,5 @@
       return assets;
     }
   ]);
-
-}).call(this);
-
-(function() {
-  angular.module('BB.Filters').filter('in_the_future', function() {
-    return function(slots) {
-      var now_tod, tim;
-      tim = moment();
-      now_tod = tim.minutes() + tim.hours() * 60;
-      return _.filter(slots, function(x) {
-        return x.time > now_tod;
-      });
-    };
-  });
-
-  angular.module('BB.Filters').filter('tod_from_now', function() {
-    return function(tod, options) {
-      var hour_string, hours, min_string, mins, now_tod, seperator, str, tim, v, val;
-      tim = moment();
-      now_tod = tim.minutes() + tim.hours() * 60;
-      v = tod - now_tod;
-      hour_string = options && options.abbr_units ? "hr" : "hour";
-      min_string = options && options.abbr_units ? "min" : "minute";
-      seperator = options && angular.isString(options.seperator) ? options.seperator : "and";
-      val = parseInt(v);
-      if (val < 60) {
-        return val + " " + min_string + "s";
-      }
-      hours = parseInt(val / 60);
-      mins = val % 60;
-      if (mins === 0) {
-        if (hours === 1) {
-          return "1 " + hour_string;
-        } else {
-          return hours + " " + hour_string + "s";
-        }
-      } else {
-        str = hours + " " + hour_string;
-        if (hours > 1) {
-          str += "s";
-        }
-        if (mins === 0) {
-          return str;
-        }
-        if (seperator.length > 0) {
-          str += " " + seperator;
-        }
-        str += " " + mins + " " + min_string + "s";
-      }
-      return str;
-    };
-  });
 
 }).call(this);
