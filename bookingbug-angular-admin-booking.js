@@ -131,12 +131,12 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, AlertService, ClientService, ValidatorService, ErrorService, $log, PaginationService) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, AlertService, ClientService, ValidatorService, ErrorService, $log, BBModel, $timeout) {
     $scope.validator = ValidatorService;
-    $scope.clients = [];
-    $scope.pagination = PaginationService.initialise({
+    $scope.clients = new BBModel.Pagination({
       page_size: 10,
-      max_size: 5
+      max_size: 5,
+      request_page_size: 100
     });
     $scope.sort_by_options = [
       {
@@ -196,29 +196,31 @@
       if (options == null) {
         options = {};
       }
-      if (!params) {
+      $scope.search_triggered = true;
+      $timeout(function() {
+        return $scope.search_triggered = false;
+      }, 1000);
+      if (!params || (params && !params.filter_by)) {
         return;
       }
       $scope.params = {
         company: $scope.bb.company,
-        per_page: 10,
+        per_page: $scope.clients.request_page_size,
         filter_by: params.filter_by,
         search_by_fields: 'phone,mobile',
         order_by: params.order_by,
         order_by_reverse: params.order_by_reverse,
-        page: params.page ? params.page : 1
+        page: params.page || 1
       };
       $scope.notLoaded($scope);
       return AdminClientService.query($scope.params).then(function(result) {
         $scope.search_complete = true;
-        if (options.append) {
-          $scope.clients = $scope.clients.concat(result.items);
+        if (options.add) {
+          $scope.clients.add(params.page, result.items);
         } else {
-          $scope.clients = result.items;
+          $scope.clients.initialise(result.items, result.total_entries);
         }
-        PaginationService.update($scope.pagination, result.total_entries);
-        $scope.setLoaded($scope);
-        return $scope.setPageLoaded();
+        return $scope.setLoaded($scope);
       });
     };
     $scope.searchClients = function(search_text) {
@@ -245,7 +247,7 @@
       return $scope.selectClient($item);
     };
     $scope.clearSearch = function() {
-      $scope.clients = [];
+      $scope.clients.initialise();
       $scope.typehead_result = null;
       return $scope.search_complete = false;
     };
@@ -253,10 +255,12 @@
       return $log.info("not implemented");
     };
     return $scope.pageChanged = function() {
-      if (PaginationService.checkItems($scope.pagination, $scope.clients.length)) {
-        $scope.params.page = $scope.pagination.current_page;
+      var items_present, page_to_load, ref;
+      ref = $scope.clients.update(), items_present = ref[0], page_to_load = ref[1];
+      if (!items_present) {
+        $scope.params.page = page_to_load;
         return $scope.getClients($scope.params, {
-          append: true
+          add: true
         });
       }
     };
