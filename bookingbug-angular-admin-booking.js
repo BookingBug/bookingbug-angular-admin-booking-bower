@@ -136,7 +136,7 @@
     $scope.clients = new BBModel.Pagination({
       page_size: 10,
       max_size: 5,
-      request_page_size: 100
+      request_page_size: 10
     });
     $scope.sort_by_options = [
       {
@@ -148,12 +148,6 @@
       }, {
         key: 'email',
         name: 'Email'
-      }, {
-        key: 'mobile',
-        name: 'Mobile'
-      }, {
-        key: 'phone',
-        name: 'Phone'
       }
     ];
     $scope.sort_by = $scope.sort_by_options[0].key;
@@ -204,11 +198,11 @@
         return;
       }
       $scope.params = {
-        company: $scope.bb.company,
-        per_page: $scope.clients.request_page_size,
+        company: params.company || $scope.bb.company,
+        per_page: params.per_page || $scope.clients.request_page_size,
         filter_by: params.filter_by,
-        search_by_fields: 'phone,mobile',
-        order_by: params.order_by,
+        search_by_fields: params.search_by_fields || 'phone,mobile',
+        order_by: params.order_by || $scope.sort_by,
         order_by_reverse: params.order_by_reverse,
         page: params.page || 1
       };
@@ -254,7 +248,7 @@
     $scope.edit = function(item) {
       return $log.info("not implemented");
     };
-    return $scope.pageChanged = function() {
+    $scope.pageChanged = function() {
       var items_present, page_to_load, ref;
       ref = $scope.clients.update(), items_present = ref[0], page_to_load = ref[1];
       if (!items_present) {
@@ -263,6 +257,11 @@
           add: true
         });
       }
+    };
+    return $scope.sortChanged = function(sort_by) {
+      $scope.params.order_by = sort_by;
+      $scope.params.page = 1;
+      return $scope.getClients($scope.params);
     };
   });
 
