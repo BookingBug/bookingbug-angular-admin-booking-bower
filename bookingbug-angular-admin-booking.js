@@ -118,7 +118,13 @@
       $scope.bb.current_item.setTime(new_timeslot);
       $scope.bb.current_item.setPerson($scope.bb.current_item.defaults.person);
       $scope.bb.current_item.setResource($scope.bb.current_item.defaults.resource);
-      return $scope.decideNextPage();
+      if ($scope.bb.current_item.reserve_ready) {
+        return $scope.addItemToBasket().then((function(_this) {
+          return function() {
+            return $scope.decideNextPage();
+          };
+        })(this));
+      }
     };
   });
 
@@ -433,13 +439,61 @@
 
 }).call(this);
 
+
+/*
+* @ngdoc service
+* @module BB.Services
+* @name AdminBookingOptions
+*
+* @description
+* Returns a set of Admin Booking configuration options
+ */
+
+
+/*
+* @ngdoc service
+* @module BB.Services
+* @name AdminBookingOptionsProvider
+*
+* @description
+* Provider
+*
+* @example
+  <example>
+  angular.module('ExampleModule').config ['AdminBookingOptionsProvider', (AdminBookingOptionsProvider) ->
+    GeneralOptionsProvider.setOption('twelve_hour_format', true)
+  ]
+  </example>
+ */
+
+(function() {
+  angular.module('BB.Services').provider('AdminBookingOptions', [
+    function() {
+      var options;
+      options = {
+        merge_resources: true,
+        merge_people: true
+      };
+      this.setOption = function(option, value) {
+        if (options.hasOwnProperty(option)) {
+          options[option] = value;
+        }
+      };
+      this.$get = function() {
+        return options;
+      };
+    }
+  ]);
+
+}).call(this);
+
 (function() {
   angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
     return {
       open: function(config) {
         return $modal.open({
           size: 'lg',
-          controller: function($scope, $modalInstance, config, $window) {
+          controller: function($scope, $modalInstance, config, $window, AdminBookingOptions) {
             var base;
             $scope.Math = $window.Math;
             if ($scope.bb && $scope.bb.current_item) {
@@ -453,8 +507,8 @@
               (base = $scope.config).company_id || (base.company_id = $scope.company.id);
             }
             $scope.config.item_defaults = angular.extend({
-              merge_resources: true,
-              merge_people: false
+              merge_resources: AdminBookingOptions.merge_resources,
+              merge_people: AdminBookingOptions.merge_people
             }, config.item_defaults);
             return $scope.cancel = function() {
               return $modalInstance.dismiss('cancel');
