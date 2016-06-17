@@ -404,7 +404,7 @@
               return blockSuccess(response);
             });
           } else if (typeof $scope.bb.current_item.resource === 'object') {
-            return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.person, {
+            return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.resource, {
               start_time: $scope.config.from_datetime,
               end_time: $scope.config.to_datetime,
               booking: true
@@ -549,7 +549,9 @@
             for (i = 0, len = people.length; i < len; i++) {
               p = people[i];
               p.title = p.name;
-              p.identifier = p.id + '_p';
+              if (p.identifier == null) {
+                p.identifier = p.id + '_p';
+              }
               p.group = 'Staff';
             }
             return assets = _.union(assets, people);
@@ -561,7 +563,9 @@
             for (i = 0, len = resources.length; i < len; i++) {
               r = resources[i];
               r.title = r.name;
-              r.identifier = r.id + '_r';
+              if (r.identifier == null) {
+                r.identifier = r.id + '_r';
+              }
               r.group = 'Resources ';
             }
             return assets = _.union(assets, resources);
