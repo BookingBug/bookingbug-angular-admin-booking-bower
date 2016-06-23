@@ -441,6 +441,58 @@
 
 }).call(this);
 
+(function() {
+  angular.module('BB.Filters').filter('in_the_future', function() {
+    return function(slots) {
+      var now_tod, tim;
+      tim = moment();
+      now_tod = tim.minutes() + tim.hours() * 60;
+      return _.filter(slots, function(x) {
+        return x.time > now_tod;
+      });
+    };
+  });
+
+  angular.module('BB.Filters').filter('tod_from_now', function() {
+    return function(tod, options) {
+      var hour_string, hours, min_string, mins, now_tod, seperator, str, tim, v, val;
+      tim = moment();
+      now_tod = tim.minutes() + tim.hours() * 60;
+      v = tod - now_tod;
+      hour_string = options && options.abbr_units ? "hr" : "hour";
+      min_string = options && options.abbr_units ? "min" : "minute";
+      seperator = options && angular.isString(options.seperator) ? options.seperator : "and";
+      val = parseInt(v);
+      if (val < 60) {
+        return val + " " + min_string + "s";
+      }
+      hours = parseInt(val / 60);
+      mins = val % 60;
+      if (mins === 0) {
+        if (hours === 1) {
+          return "1 " + hour_string;
+        } else {
+          return hours + " " + hour_string + "s";
+        }
+      } else {
+        str = hours + " " + hour_string;
+        if (hours > 1) {
+          str += "s";
+        }
+        if (mins === 0) {
+          return str;
+        }
+        if (seperator.length > 0) {
+          str += " " + seperator;
+        }
+        str += " " + mins + " " + min_string + "s";
+      }
+      return str;
+    };
+  });
+
+}).call(this);
+
 
 /*
 * @ngdoc service
@@ -608,57 +660,5 @@
       return assets;
     }
   ]);
-
-}).call(this);
-
-(function() {
-  angular.module('BB.Filters').filter('in_the_future', function() {
-    return function(slots) {
-      var now_tod, tim;
-      tim = moment();
-      now_tod = tim.minutes() + tim.hours() * 60;
-      return _.filter(slots, function(x) {
-        return x.time > now_tod;
-      });
-    };
-  });
-
-  angular.module('BB.Filters').filter('tod_from_now', function() {
-    return function(tod, options) {
-      var hour_string, hours, min_string, mins, now_tod, seperator, str, tim, v, val;
-      tim = moment();
-      now_tod = tim.minutes() + tim.hours() * 60;
-      v = tod - now_tod;
-      hour_string = options && options.abbr_units ? "hr" : "hour";
-      min_string = options && options.abbr_units ? "min" : "minute";
-      seperator = options && angular.isString(options.seperator) ? options.seperator : "and";
-      val = parseInt(v);
-      if (val < 60) {
-        return val + " " + min_string + "s";
-      }
-      hours = parseInt(val / 60);
-      mins = val % 60;
-      if (mins === 0) {
-        if (hours === 1) {
-          return "1 " + hour_string;
-        } else {
-          return hours + " " + hour_string + "s";
-        }
-      } else {
-        str = hours + " " + hour_string;
-        if (hours > 1) {
-          str += "s";
-        }
-        if (mins === 0) {
-          return str;
-        }
-        if (seperator.length > 0) {
-          str += " " + seperator;
-        }
-        str += " " + mins + " " + min_string + "s";
-      }
-      return str;
-    };
-  });
 
 }).call(this);
