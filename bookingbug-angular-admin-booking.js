@@ -85,7 +85,7 @@
       } else if ($scope.bb.current_item.defaults.time != null) {
         $scope.switchView('day');
       } else {
-        $scope.switchView('multi_day');
+        $scope.switchView($scope.bb.item_defaults.day_view || 'multi_day');
       }
       if ($scope.bb.current_item.person) {
         $scope.person_name = $scope.bb.current_item.person.name;
@@ -95,10 +95,22 @@
       }
     };
     $scope.switchView = function(view) {
-      var key, ref, value;
-      ref = $scope.calendar_view;
-      for (key in ref) {
-        value = ref[key];
+      var i, key, len, ref, ref1, slot, value;
+      if (view === "day") {
+        if ($scope.slots && $scope.bb.current_item.time) {
+          ref = $scope.slots;
+          for (i = 0, len = ref.length; i < len; i++) {
+            slot = ref[i];
+            if (slot.time === $scope.bb.current_item.time.time) {
+              $scope.highlightSlot(slot, $scope.bb.current_item.date);
+              break;
+            }
+          }
+        }
+      }
+      ref1 = $scope.calendar_view;
+      for (key in ref1) {
+        value = ref1[key];
         $scope.calendar_view[key] = false;
       }
       return $scope.calendar_view[view] = true;
@@ -526,7 +538,8 @@
       var options;
       options = {
         merge_resources: true,
-        merge_people: true
+        merge_people: true,
+        day_view: 'multi_day'
       };
       this.setOption = function(option, value) {
         if (options.hasOwnProperty(option)) {
