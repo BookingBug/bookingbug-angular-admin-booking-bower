@@ -366,6 +366,137 @@
 }).call(this);
 
 (function() {
+  angular.module('BBAdminBooking').directive('bbAdminMoveBooking', function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http, BBModel, AdminBookingService, $rootScope) {
+    var getTemplate, link, renderTemplate;
+    getTemplate = function(template) {
+      var fromTemplateCache, partial, src;
+      partial = template ? template : 'main';
+      fromTemplateCache = $templateCache.get(partial);
+      if (fromTemplateCache) {
+        return fromTemplateCache;
+      } else {
+        src = PathSvc.directivePartial(partial).$$unwrapTrustedValue();
+        return $http.get(src, {
+          cache: $templateCache
+        }).then(function(response) {
+          return response.data;
+        });
+      }
+    };
+    renderTemplate = function(scope, element, design_mode, template) {
+      return $q.when(getTemplate(template)).then(function(template) {
+        element.html(template).show();
+        if (design_mode) {
+          element.append('<style widget_css scoped></style>');
+        }
+        $compile(element.contents())(scope);
+        return scope.decideNextPage("calendar");
+      });
+    };
+    link = function(scope, element, attrs) {
+      var config;
+      config = scope.$eval(attrs.bbAdminMoveBooking);
+      config || (config = {});
+      config.no_route = true;
+      config.admin = true;
+      config.template || (config.template = "main");
+      if (!attrs.companyId) {
+        if (config.company_id) {
+          attrs.companyId = config.company_id;
+        } else if (scope.company) {
+          attrs.companyId = scope.company.id;
+        }
+      }
+      if (attrs.companyId) {
+        return AdminCompanyService.query(attrs).then(function(company) {
+          scope.initWidget(config);
+          return AdminBookingService.getBooking({
+            company_id: company.id,
+            id: config.booking_id,
+            url: scope.bb.api_url
+          }).then(function(booking) {
+            var client_prom, new_item, proms;
+            scope.company = company;
+            scope.bb.moving_booking = booking;
+            scope.quickEmptybasket();
+            proms = [];
+            new_item = new BBModel.BasketItem(booking, scope.bb);
+            new_item.setSrcBooking(booking, scope.bb);
+            new_item.clearDateTime();
+            new_item.ready = false;
+            if (booking.$has('client')) {
+              client_prom = booking.$get('client');
+              proms.push(client_prom);
+              client_prom.then((function(_this) {
+                return function(client) {
+                  return scope.setClient(new BBModel.Client(client));
+                };
+              })(this));
+            }
+            Array.prototype.push.apply(proms, new_item.promises);
+            scope.bb.basket.addItem(new_item);
+            scope.setBasketItem(new_item);
+            return $q.all(proms).then(function() {
+              $rootScope.$broadcast("booking:move");
+              scope.setLoaded(scope);
+              return renderTemplate(scope, element, config.design_mode, config.template);
+            }, function(err) {
+              scope.setLoaded(scope);
+              return failMsg();
+            });
+          });
+        });
+      }
+    };
+    return {
+      link: link,
+      controller: 'BBCtrl'
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', function($modal, $timeout) {
+    return {
+      open: function(config) {
+        return $modal.open({
+          size: 'lg',
+          controller: function($scope, $modalInstance, config, $window, AdminBookingOptions) {
+            var base;
+            $scope.Math = $window.Math;
+            if ($scope.bb && $scope.bb.current_item) {
+              delete $scope.bb.current_item;
+            }
+            $scope.config = angular.extend({
+              clear_member: true,
+              template: 'main'
+            }, config);
+            if ($scope.company) {
+              (base = $scope.config).company_id || (base.company_id = $scope.company.id);
+            }
+            $scope.config.item_defaults = angular.extend({
+              merge_resources: AdminBookingOptions.merge_resources,
+              merge_people: AdminBookingOptions.merge_people
+            }, config.item_defaults);
+            return $scope.cancel = function() {
+              return $modalInstance.dismiss('cancel');
+            };
+          },
+          templateUrl: 'admin_move_booking_popup.html',
+          resolve: {
+            config: function() {
+              return config;
+            }
+          }
+        });
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
   angular.module('BBAdminBooking').directive('bbBlockTime', function() {
     return {
       scope: true,
@@ -376,13 +507,22 @@
         BBAssets($scope.bb.company).then(function(assets) {
           return $scope.resources = assets;
         });
-        if (!moment.isMoment($scope.config.to_datetime)) {
-          $scope.config.to_datetime = moment($scope.config.to_datetime);
+        if (!moment.isMoment($scope.bb.to_datetime)) {
+          $scope.bb.to_datetime = moment($scope.bb.to_datetime);
         }
-        if (!moment.isMoment($scope.config.from_datetime)) {
-          $scope.config.from_datetime = moment($scope.config.from_datetime);
+        if (!moment.isMoment($scope.bb.from_datetime)) {
+          $scope.bb.from_datetime = moment($scope.bb.from_datetime);
         }
-        $scope.hideBlockAllDay = Math.abs($scope.config.from_datetime.diff($scope.config.to_datetime, 'days')) > 0;
+        if (!moment.isMoment($scope.bb.to_datetime)) {
+          $scope.bb.to_datetime = moment($scope.bb.to_datetime);
+        }
+        if ($scope.bb.min_date && !moment.isMoment($scope.bb.min_date)) {
+          $scope.bb.min_date = moment($scope.bb.min_date);
+        }
+        if ($scope.bb.max_date && !moment.isMoment($scope.bb.max_date)) {
+          $scope.bb.max_date = moment($scope.bb.max_date);
+        }
+        $scope.hideBlockAllDay = Math.abs($scope.bb.from_datetime.diff($scope.bb.to_datetime, 'days')) > 0;
         if (($scope.bb.current_item.person != null) && ($scope.bb.current_item.person.id != null)) {
           $scope.picked_resource = $scope.bb.current_item.person.id + '_p';
         }
@@ -411,16 +551,16 @@
           }
           if (typeof $scope.bb.current_item.person === 'object') {
             return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
-              start_time: $scope.config.from_datetime,
-              end_time: $scope.config.to_datetime,
+              start_time: $scope.bb.from_datetime,
+              end_time: $scope.bb.to_datetime,
               booking: true
             }).then(function(response) {
               return blockSuccess(response);
             });
           } else if (typeof $scope.bb.current_item.resource === 'object') {
             return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.resource, {
-              start_time: $scope.config.from_datetime,
-              end_time: $scope.config.to_datetime,
+              start_time: $scope.bb.from_datetime,
+              end_time: $scope.bb.to_datetime,
               booking: true
             }).then(function(response) {
               return blockSuccess(response);
@@ -432,7 +572,7 @@
           if (typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') {
             $scope.resourceError = true;
           }
-          if ((typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') || ($scope.config.from_datetime == null) || !$scope.config.to_datetime) {
+          if ((typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') || ($scope.bb.from_datetime == null) || !$scope.bb.to_datetime) {
             return false;
           }
           return true;
@@ -443,8 +583,8 @@
         };
         return $scope.changeBlockDay = function(blockDay) {
           if (blockDay) {
-            $scope.config.from_datetime = $scope.config.min_date.format();
-            return $scope.config.to_datetime = $scope.config.max_date.format();
+            $scope.bb.from_datetime = $scope.bb.min_date.format();
+            return $scope.bb.to_datetime = $scope.bb.max_date.format();
           }
         };
       }
