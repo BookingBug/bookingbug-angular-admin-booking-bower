@@ -460,7 +460,8 @@
   angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', function($modal, $timeout) {
     return {
       open: function(config) {
-        return $modal.open({
+        var modal;
+        modal = $modal.open({
           size: 'lg',
           controller: function($scope, $modalInstance, config, $window, AdminBookingOptions) {
             var base;
@@ -489,6 +490,17 @@
               return config;
             }
           }
+        });
+        return modal.result.then(function(result) {
+          if (config.success) {
+            config.success();
+          }
+          return result;
+        }, function(err) {
+          if (config.fail) {
+            config.fail();
+          }
+          return err;
         });
       }
     };
