@@ -1,0 +1,96 @@
+// section 1 <-------------------------->
+.section1{
+
+}
+.cal-header{
+  text-align: center;
+  margin-bottom: 13px;
+}
+.cal-subheader{
+  // background-color: #d43f3a;
+  padding-top: 20px;
+  padding-bottom: 5px;
+  margin-top: 10px;
+  border-bottom: 1px solid #dddddd;
+}
+// section 2 <-------------------------->
+.section2{
+  padding: 10px 0 0 0;
+  .bb-section-title{
+    border-bottom: 1px solid #CCC;
+  }
+}
+.panel-header-cal-admin{
+  text-align: center;
+}
+.cal-dateheader{
+  padding-top: 5px;
+}
+.calendar-cal-admin{
+  .panel-title{
+    padding-bottom: 0px;
+  }
+}
+.cal-dateheader-btn{
+  height: 47px;
+  &:hover{
+    text-decoration: underline;
+  }
+}
+// section 3 <-------------------------->
+.section3{
+  border-top: 1px solid #dddddd;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+// modal styling <-------------------------->
+
+.cal-modal-header{
+  background-color: #de5551;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  .cal-modal-h-text{
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-left: 10px;
+    color: white;
+  }
+}
+.cal-modal-body{
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+// information section <-------------------------->
+.widget-wrapper .header-top, .widget-wrapper .header-top:hover {
+  text-decoration: none;
+  border-bottom: 1px solid #666;
+  margin-bottom: 20px;
+  padding-top: 5px;
+  border-top: 1px solid #dddddd !important;
+  h2{
+    font-size: 28px !important;
+    font-weight: 300;
+    text-align: center;
+  }
+
+}
+.widget-wrapper {
+  .header-top{
+    border-bottom: 1px solid #CCC;
+  }
+}
+
+.widget-wrapper ul {
+  list-style: none;
+  padding-left: 0px;
+}
+
+.widget-wrapper ul li {
+  padding: 15px;
+  border: 1px solid #eee;
+}
+
+.widget-wrapper span {
+  margin-right: 10px;
+}
