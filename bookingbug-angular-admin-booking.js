@@ -149,9 +149,10 @@
   angular.module('BBAdminBooking').directive('bbAdminBookingClients', function() {
     return {
       restrict: 'AE',
-      replace: true,
+      replace: false,
       scope: true,
-      controller: 'adminBookingClients'
+      controller: 'adminBookingClients',
+      templateUrl: 'admin_booking_clients.html'
     };
   });
 
