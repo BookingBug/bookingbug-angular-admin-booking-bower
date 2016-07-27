@@ -964,7 +964,21 @@
           }));
         }
         $q.all(promises).then(function() {
-          assets = _.sortBy(assets, 'name');
+          assets.sort(function(a, b) {
+            if (a.type === "person" && b.type === "resource") {
+              return -1;
+            }
+            if (a.type === "resource" && b.type === "person") {
+              return 1;
+            }
+            if (a.name > b.name) {
+              return 1;
+            }
+            if (a.name < b.name) {
+              return -1;
+            }
+            return 0;
+          });
           return delay.resolve(assets);
         });
         return delay.promise;
