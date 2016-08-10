@@ -4,9 +4,9 @@
 
   adminbookingapp = angular.module('BBAdminBooking', ['BB', 'BBAdmin.Services', 'BBAdminServices', 'trNgGrid']);
 
-  angular.module('BBAdminBooking').config(["$logProvider", function($logProvider) {
+  angular.module('BBAdminBooking').config(function($logProvider) {
     return $logProvider.debugEnabled(true);
-  }]);
+  });
 
   angular.module('BBAdminBooking.Directives', []);
 
@@ -14,14 +14,14 @@
 
   angular.module('BBAdminBooking.Controllers', ['ngLocalData', 'ngSanitize']);
 
-  adminbookingapp.run(["$rootScope", "$log", "DebugUtilsService", "FormDataStoreService", "$bbug", "$document", "$sessionStorage", "AppConfig", "AdminLoginService", function($rootScope, $log, DebugUtilsService, FormDataStoreService, $bbug, $document, $sessionStorage, AppConfig, AdminLoginService) {
+  adminbookingapp.run(function($rootScope, $log, DebugUtilsService, FormDataStoreService, $bbug, $document, $sessionStorage, AppConfig, AdminLoginService) {
     return AdminLoginService.checkLogin().then(function() {
       if ($rootScope.user && $rootScope.user.company_id) {
         $rootScope.bb || ($rootScope.bb = {});
         return $rootScope.bb.company_id = $rootScope.user.company_id;
       }
     });
-  }]);
+  });
 
 }).call(this);
 
@@ -65,7 +65,7 @@
     };
   });
 
-  angular.module('BB.Controllers').controller('adminCalendarCtrl', ["$scope", "$element", "$controller", "$attrs", "$modal", "BBModel", "$rootScope", function($scope, $element, $controller, $attrs, $modal, BBModel, $rootScope) {
+  angular.module('BB.Controllers').controller('adminCalendarCtrl', function($scope, $element, $controller, $attrs, $modal, BBModel, $rootScope) {
     angular.extend(this, $controller('TimeList', {
       $scope: $scope,
       $attrs: $attrs,
@@ -140,7 +140,7 @@
         return $scope.decideNextPage();
       }
     };
-  }]);
+  });
 
 }).call(this);
 
@@ -156,7 +156,7 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', ["$scope", "$rootScope", "$q", "AdminClientService", "AlertService", "ClientService", "ValidatorService", "ErrorService", "$log", "BBModel", "$timeout", function($scope, $rootScope, $q, AdminClientService, AlertService, ClientService, ValidatorService, ErrorService, $log, BBModel, $timeout) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, AlertService, ClientService, ValidatorService, ErrorService, $log, BBModel, $timeout) {
     $scope.validator = ValidatorService;
     $scope.clients = new BBModel.Pagination({
       page_size: 10,
@@ -288,12 +288,12 @@
       $scope.params.page = 1;
       return $scope.getClients($scope.params);
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminBooking', ["AdminCompanyService", "$log", "$compile", "$q", "PathSvc", "$templateCache", "$http", function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http) {
+  angular.module('BBAdminBooking').directive('bbAdminBooking', function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http) {
     var getTemplate, link, renderTemplate;
     getTemplate = function(template) {
       var fromTemplateCache, partial, src;
@@ -343,12 +343,12 @@
       link: link,
       controller: 'BBCtrl'
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminBookingPopup', ["AdminBookingPopup", function(AdminBookingPopup) {
+  angular.module('BBAdminBooking').directive('bbAdminBookingPopup', function(AdminBookingPopup) {
     return {
       restrict: 'A',
       link: function(scope, element, attrs) {
@@ -356,18 +356,18 @@
           return scope.open();
         });
       },
-      controller: ["$scope", function($scope) {
+      controller: function($scope) {
         return $scope.open = function() {
           return AdminBookingPopup.open();
         };
-      }]
+      }
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminMemberBookingsTable', ["$modal", "$log", "$rootScope", "AdminBookingService", "$compile", "$templateCache", "ModalForm", "BBModel", "Dialog", "AdminMoveBookingPopup", function($modal, $log, $rootScope, AdminBookingService, $compile, $templateCache, ModalForm, BBModel, Dialog, AdminMoveBookingPopup) {
+  angular.module('BBAdminBooking').directive('bbAdminMemberBookingsTable', function($modal, $log, $rootScope, AdminBookingService, $compile, $templateCache, ModalForm, BBModel, Dialog, AdminMoveBookingPopup) {
     var controller;
     controller = function($scope, $modal) {
       var getBookings, updateBooking;
@@ -443,7 +443,7 @@
         });
         modalInstance = $modal.open({
           templateUrl: 'member_bookings_table_cancel_booking.html',
-          controller: ["$scope", "$modalInstance", "booking", function($scope, $modalInstance, booking) {
+          controller: function($scope, $modalInstance, booking) {
             $scope.booking = booking;
             $scope.booking.notify = true;
             $scope.ok = function() {
@@ -452,7 +452,7 @@
             return $scope.close = function() {
               return $modalInstance.dismiss();
             };
-          }],
+          },
           scope: $scope,
           resolve: {
             booking: function() {
@@ -534,12 +534,12 @@
         defaultOrder: '=?'
       }
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminMoveBooking', ["AdminCompanyService", "$log", "$compile", "$q", "PathSvc", "$templateCache", "$http", "BBModel", "AdminBookingService", "$rootScope", function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http, BBModel, AdminBookingService, $rootScope) {
+  angular.module('BBAdminBooking').directive('bbAdminMoveBooking', function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http, BBModel, AdminBookingService, $rootScope) {
     var getTemplate, link, renderTemplate;
     getTemplate = function(template) {
       var fromTemplateCache, partial, src;
@@ -625,18 +625,18 @@
       link: link,
       controller: 'BBCtrl'
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', ["$modal", "$timeout", function($modal, $timeout) {
+  angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', function($modal, $timeout) {
     return {
       open: function(config) {
         var modal;
         modal = $modal.open({
           size: 'lg',
-          controller: ["$scope", "$modalInstance", "config", "$window", "AdminBookingOptions", function($scope, $modalInstance, config, $window, AdminBookingOptions) {
+          controller: function($scope, $modalInstance, config, $window, AdminBookingOptions) {
             var base;
             $scope.Math = $window.Math;
             if ($scope.bb && $scope.bb.current_item) {
@@ -656,7 +656,7 @@
             return $scope.cancel = function() {
               return $modalInstance.dismiss('cancel');
             };
-          }],
+          },
           templateUrl: 'admin_move_booking_popup.html',
           resolve: {
             config: function() {
@@ -677,7 +677,7 @@
         });
       }
     };
-  }]);
+  });
 
 }).call(this);
 
@@ -686,7 +686,7 @@
     return {
       scope: true,
       restrict: 'A',
-      controller: ["$scope", "$element", "$attrs", "AdminPersonService", "AdminResourceService", "BBModel", "BookingCollections", "$rootScope", "BBAssets", function($scope, $element, $attrs, AdminPersonService, AdminResourceService, BBModel, BookingCollections, $rootScope, BBAssets) {
+      controller: function($scope, $element, $attrs, AdminPersonService, AdminResourceService, BBModel, BookingCollections, $rootScope, BBAssets) {
         var blockSuccess, isValid;
         $scope.resources = [];
         BBAssets($scope.bb.company).then(function(assets) {
@@ -772,7 +772,7 @@
             return $scope.bb.to_datetime = $scope.bb.max_date.format();
           }
         };
-      }]
+      }
     };
   });
 
@@ -858,7 +858,8 @@
  */
 
 (function() {
-  angular.module('BB.Services').provider('AdminBookingOptions', function() {
+  angular.module('BB.Services').provider('AdminBookingOptions', [
+    function() {
       var options;
       options = {
         merge_resources: true,
@@ -873,17 +874,18 @@
       this.$get = function() {
         return options;
       };
-    });
+    }
+  ]);
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').factory('AdminBookingPopup', ["$modal", "$timeout", function($modal, $timeout) {
+  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($modal, $timeout) {
     return {
       open: function(config) {
         return $modal.open({
           size: 'lg',
-          controller: ["$scope", "$modalInstance", "config", "$window", "AdminBookingOptions", function($scope, $modalInstance, config, $window, AdminBookingOptions) {
+          controller: function($scope, $modalInstance, config, $window, AdminBookingOptions) {
             var base;
             $scope.Math = $window.Math;
             if ($scope.bb && $scope.bb.current_item) {
@@ -903,7 +905,7 @@
             return $scope.cancel = function() {
               return $modalInstance.dismiss('cancel');
             };
-          }],
+          },
           templateUrl: 'admin_booking_popup.html',
           resolve: {
             config: function() {
@@ -913,7 +915,7 @@
         });
       }
     };
-  }]);
+  });
 
 }).call(this);
 
@@ -926,7 +928,8 @@
  */
 
 (function() {
-  angular.module('BBAdminBooking').factory('BBAssets', ["$q", function($q) {
+  angular.module('BBAdminBooking').factory('BBAssets', [
+    '$q', function($q) {
       return function(company) {
         var assets, delay, promises;
         delay = $q.defer();
@@ -994,7 +997,8 @@
  */
 
 (function() {
-  angular.module('BBAdminBooking').factory('ProcessAssetsFilter', function() {
+  angular.module('BBAdminBooking').factory('ProcessAssetsFilter', [
+    function() {
       return function(string) {
         var assets;
         assets = [];
@@ -1006,6 +1010,7 @@
         });
       };
       return assets;
-    });
+    }
+  ]);
 
 }).call(this);
