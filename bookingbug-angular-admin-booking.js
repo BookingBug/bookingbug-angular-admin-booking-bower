@@ -4,24 +4,24 @@
 
   adminbookingapp = angular.module('BBAdminBooking', ['BB', 'BBAdmin.Services', 'BBAdminServices', 'trNgGrid']);
 
-  angular.module('BBAdminBooking').config(["$logProvider", function($logProvider) {
+  angular.module('BBAdminBooking').config(function($logProvider) {
     return $logProvider.debugEnabled(true);
-  }]);
+  });
 
   angular.module('BBAdminBooking.Directives', []);
 
-  angular.module('BBAdminBooking.Services', ['ngResource', 'ngSanitize', 'ngLocalData']);
+  angular.module('BBAdminBooking.Services', ['ngResource', 'ngSanitize']);
 
   angular.module('BBAdminBooking.Controllers', ['ngLocalData', 'ngSanitize']);
 
-  adminbookingapp.run(["$rootScope", "$log", "DebugUtilsService", "FormDataStoreService", "$bbug", "$document", "$sessionStorage", "AppConfig", "AdminLoginService", function($rootScope, $log, DebugUtilsService, FormDataStoreService, $bbug, $document, $sessionStorage, AppConfig, AdminLoginService) {
-    return AdminLoginService.checkLogin().then(function() {
+  adminbookingapp.run(function($rootScope, $log, DebugUtilsService, $bbug, $document, $sessionStorage, FormDataStoreService, AppConfig, BBModel) {
+    return BBModel.Admin.Login.$checkLogin().then(function() {
       if ($rootScope.user && $rootScope.user.company_id) {
         $rootScope.bb || ($rootScope.bb = {});
         return $rootScope.bb.company_id = $rootScope.user.company_id;
       }
     });
-  }]);
+  });
 
 }).call(this);
 
@@ -65,7 +65,7 @@
     };
   });
 
-  angular.module('BB.Controllers').controller('adminCalendarCtrl', ["$scope", "$element", "$controller", "$attrs", "$modal", "BBModel", "$rootScope", function($scope, $element, $controller, $attrs, $modal, BBModel, $rootScope) {
+  angular.module('BB.Controllers').controller('adminCalendarCtrl', function($scope, $element, $controller, $attrs, BBModel, $rootScope) {
     angular.extend(this, $controller('TimeList', {
       $scope: $scope,
       $attrs: $attrs,
@@ -140,7 +140,7 @@
         return $scope.decideNextPage();
       }
     };
-  }]);
+  });
 
 }).call(this);
 
@@ -156,13 +156,15 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', ["$scope", "$rootScope", "$q", "AdminClientService", "AlertService", "ClientService", "ValidatorService", "ErrorService", "$log", "BBModel", "$timeout", function($scope, $rootScope, $q, AdminClientService, AlertService, ClientService, ValidatorService, ErrorService, $log, BBModel, $timeout) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AlertService, ValidatorService, ErrorService, $log, BBModel, $timeout, LoadingService) {
+    var loader;
     $scope.validator = ValidatorService;
     $scope.clients = new BBModel.Pagination({
       page_size: 10,
       max_size: 5,
       request_page_size: 10
     });
+    loader = LoadingService.$loader($scope);
     $scope.sort_by_options = [
       {
         key: 'first_name',
@@ -188,25 +190,25 @@
     })(this);
     $scope.createClient = (function(_this) {
       return function(route) {
-        $scope.notLoaded($scope);
+        loader.notLoaded();
         if ($scope.bb && $scope.bb.parent_client) {
           $scope.client.parent_client_id = $scope.bb.parent_client.id;
         }
         if ($scope.client_details) {
           $scope.client.setClientDetails($scope.client_details);
         }
-        return ClientService.create_or_update($scope.bb.company, $scope.client).then(function(client) {
-          $scope.setLoaded($scope);
+        return BBModel.Client.$create_or_update($scope.bb.company, $scope.client).then(function(client) {
+          loader.setLoaded();
           return $scope.selectClient(client, route);
         }, function(err) {
           if (err.data && err.data.error === "Please Login") {
-            $scope.setLoaded($scope);
+            loader.setLoaded();
             return AlertService.raise('EMAIL_ALREADY_REGISTERED_ADMIN');
           } else if (err.data && err.data.error === "Sorry, it appears that this phone number already exists") {
-            $scope.setLoaded($scope);
+            loader.setLoaded();
             return AlertService.raise('PHONE_NUMBER_ALREADY_REGISTERED_ADMIN');
           } else {
-            return $scope.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
+            return loader.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
           }
         });
       };
@@ -232,14 +234,14 @@
         page: params.page || 1
       };
       $scope.notLoaded($scope);
-      return AdminClientService.query($scope.params).then(function(result) {
+      return BBModel.Admin.Client.$query($scope.params).then(function(result) {
         $scope.search_complete = true;
         if (options.add) {
           $scope.clients.add(params.page, result.items);
         } else {
           $scope.clients.initialise(result.items, result.total_entries);
         }
-        return $scope.setLoaded($scope);
+        return loader.setLoaded();
       });
     };
     $scope.searchClients = function(search_text) {
@@ -249,10 +251,9 @@
         filter_by: search_text,
         company: $scope.bb.company
       };
-      AdminClientService.query(params).then((function(_this) {
+      BBModel.Admin.Client.$query(params).then((function(_this) {
         return function(clients) {
-          defer.resolve(clients.items);
-          return clients.items;
+          return defer.resolve(clients);
         };
       })(this));
       return defer.promise;
@@ -288,12 +289,12 @@
       $scope.params.page = 1;
       return $scope.getClients($scope.params);
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminBooking', ["AdminCompanyService", "$log", "$compile", "$q", "PathSvc", "$templateCache", "$http", function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http) {
+  angular.module('BBAdminBooking').directive('bbAdminBooking', function(BBModel, $log, $compile, $q, PathSvc, $templateCache, $http) {
     var getTemplate, link, renderTemplate;
     getTemplate = function(template) {
       var fromTemplateCache, partial, src;
@@ -332,7 +333,7 @@
         }
       }
       if (attrs.companyId) {
-        return AdminCompanyService.query(attrs).then(function(company) {
+        return BBModel.Admin.Company.$query(attrs).then(function(company) {
           scope.company = company;
           scope.initWidget(config);
           return renderTemplate(scope, element, config.design_mode, config.template);
@@ -343,12 +344,12 @@
       link: link,
       controller: 'BBCtrl'
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminBookingPopup', ["AdminBookingPopup", function(AdminBookingPopup) {
+  angular.module('BBAdminBooking').directive('bbAdminBookingPopup', function(AdminBookingPopup) {
     return {
       restrict: 'A',
       link: function(scope, element, attrs) {
@@ -356,20 +357,20 @@
           return scope.open();
         });
       },
-      controller: ["$scope", function($scope) {
+      controller: function($scope) {
         return $scope.open = function() {
           return AdminBookingPopup.open();
         };
-      }]
+      }
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminMemberBookingsTable', ["$modal", "$log", "$rootScope", "AdminBookingService", "$compile", "$templateCache", "ModalForm", "BBModel", "Dialog", "AdminMoveBookingPopup", function($modal, $log, $rootScope, AdminBookingService, $compile, $templateCache, ModalForm, BBModel, Dialog, AdminMoveBookingPopup) {
+  angular.module('BBAdminBooking').directive('bbAdminMemberBookingsTable', function($uibModal, $log, $rootScope, AdminBookingService, $compile, $templateCache, ModalForm, BBModel, Dialog, AdminMoveBookingPopup) {
     var controller;
-    controller = function($scope, $modal) {
+    controller = function($scope, $uibModal) {
       var getBookings, updateBooking;
       $scope.loading = true;
       $scope.fields || ($scope.fields = ['date_order', 'details']);
@@ -441,18 +442,18 @@
         booking = _.find($scope.booking_models, function(b) {
           return b.id === id;
         });
-        modalInstance = $modal.open({
+        modalInstance = $uibModal.open({
           templateUrl: 'member_bookings_table_cancel_booking.html',
-          controller: ["$scope", "$modalInstance", "booking", function($scope, $modalInstance, booking) {
+          controller: function($scope, $uibModalInstance, booking) {
             $scope.booking = booking;
             $scope.booking.notify = true;
             $scope.ok = function() {
-              return $modalInstance.close($scope.booking);
+              return $uibModalInstance.close($scope.booking);
             };
             return $scope.close = function() {
-              return $modalInstance.dismiss();
+              return $uibModalInstance.dismiss();
             };
-          }],
+          },
           scope: $scope,
           resolve: {
             booking: function() {
@@ -534,12 +535,13 @@
         defaultOrder: '=?'
       }
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminMoveBooking', ["AdminCompanyService", "$log", "$compile", "$q", "PathSvc", "$templateCache", "$http", "BBModel", "AdminBookingService", "$rootScope", function(AdminCompanyService, $log, $compile, $q, PathSvc, $templateCache, $http, BBModel, AdminBookingService, $rootScope) {
+  'use strict';
+  angular.module('BBAdminBooking').directive('bbAdminMoveBooking', function($log, $compile, $q, PathSvc, $templateCache, $http, BBModel, $rootScope) {
     var getTemplate, link, renderTemplate;
     getTemplate = function(template) {
       var fromTemplateCache, partial, src;
@@ -581,13 +583,9 @@
         }
       }
       if (attrs.companyId) {
-        return AdminCompanyService.query(attrs).then(function(company) {
+        return BBModel.Admin.Company.$query(attrs).then(function(company) {
           scope.initWidget(config);
-          return AdminBookingService.getBooking({
-            company_id: company.id,
-            id: config.booking_id,
-            url: scope.bb.api_url
-          }).then(function(booking) {
+          return company.getBooking(config.booking_id).then(function(booking) {
             var client_prom, new_item, proms;
             scope.company = company;
             scope.bb.moving_booking = booking;
@@ -625,18 +623,19 @@
       link: link,
       controller: 'BBCtrl'
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', ["$modal", "$timeout", function($modal, $timeout) {
+  angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', function($uibModal, $timeout, $document) {
     return {
       open: function(config) {
         var modal;
-        modal = $modal.open({
+        modal = $uibModal.open({
+          appendTo: angular.element($document[0].getElementById('bb')),
           size: 'lg',
-          controller: ["$scope", "$modalInstance", "config", "$window", "AdminBookingOptions", function($scope, $modalInstance, config, $window, AdminBookingOptions) {
+          controller: function($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
             var base;
             $scope.Math = $window.Math;
             if ($scope.bb && $scope.bb.current_item) {
@@ -654,9 +653,9 @@
               merge_people: AdminBookingOptions.merge_people
             }, config.item_defaults);
             return $scope.cancel = function() {
-              return $modalInstance.dismiss('cancel');
+              return $uibModalInstance.dismiss('cancel');
             };
-          }],
+          },
           templateUrl: 'admin_move_booking_popup.html',
           resolve: {
             config: function() {
@@ -677,16 +676,17 @@
         });
       }
     };
-  }]);
+  });
 
 }).call(this);
 
 (function() {
+  'use strict';
   angular.module('BBAdminBooking').directive('bbBlockTime', function() {
     return {
       scope: true,
       restrict: 'A',
-      controller: ["$scope", "$element", "$attrs", "AdminPersonService", "AdminResourceService", "BBModel", "BookingCollections", "$rootScope", "BBAssets", function($scope, $element, $attrs, AdminPersonService, AdminResourceService, BBModel, BookingCollections, $rootScope, BBAssets) {
+      controller: function($scope, $element, $attrs, BBModel, BookingCollections, $rootScope, BBAssets) {
         var blockSuccess, isValid;
         $scope.resources = [];
         BBAssets($scope.bb.company).then(function(assets) {
@@ -714,6 +714,13 @@
         if (($scope.bb.current_item.resource != null) && ($scope.bb.current_item.resource.id != null)) {
           $scope.picked_resource = $scope.bb.current_item.resource.id + '_r';
         }
+        if ($scope.bb.company_settings && $scope.bb.company_settings.$has('block_questions')) {
+          $scope.bb.company_settings.$get("block_questions", {}).then((function(_this) {
+            return function(details) {
+              return $scope.block_questions = new BBModel.ItemDetails(details);
+            };
+          })(this));
+        }
         $scope.changeResource = function() {
           var parts;
           if ($scope.picked_resource != null) {
@@ -731,23 +738,24 @@
           }
         };
         $scope.blockTime = function() {
+          var params;
           if (!isValid()) {
             return false;
           }
+          params = {
+            start_time: $scope.bb.from_datetime,
+            end_time: $scope.bb.to_datetime,
+            booking: true
+          };
+          if ($scope.block_questions) {
+            params.questions = $scope.block_questions.getPostData();
+          }
           if (typeof $scope.bb.current_item.person === 'object') {
-            return AdminPersonService.block($scope.bb.company, $scope.bb.current_item.person, {
-              start_time: $scope.bb.from_datetime,
-              end_time: $scope.bb.to_datetime,
-              booking: true
-            }).then(function(response) {
+            return BBModel.Admin.Person.$block($scope.bb.company, $scope.bb.current_item.person, params).then(function(response) {
               return blockSuccess(response);
             });
           } else if (typeof $scope.bb.current_item.resource === 'object') {
-            return AdminResourceService.block($scope.bb.company, $scope.bb.current_item.resource, {
-              start_time: $scope.bb.from_datetime,
-              end_time: $scope.bb.to_datetime,
-              booking: true
-            }).then(function(response) {
+            return BBModel.Admin.Resource.$block($scope.bb.company, $scope.bb.current_item.resource, params).then(function(response) {
               return blockSuccess(response);
             });
           }
@@ -772,7 +780,7 @@
             return $scope.bb.to_datetime = $scope.bb.max_date.format();
           }
         };
-      }]
+      }
     };
   });
 
@@ -830,60 +838,61 @@
 
 }).call(this);
 
-
-/*
-* @ngdoc service
-* @module BB.Services
-* @name AdminBookingOptions
-*
-* @description
-* Returns a set of Admin Booking configuration options
- */
-
-
-/*
-* @ngdoc service
-* @module BB.Services
-* @name AdminBookingOptionsProvider
-*
-* @description
-* Provider
-*
-* @example
-  <example>
-  angular.module('ExampleModule').config ['AdminBookingOptionsProvider', (AdminBookingOptionsProvider) ->
-    GeneralOptionsProvider.setOption('twelve_hour_format', true)
-  ]
-  </example>
- */
-
 (function() {
+  'use strict';
+
+  /*
+  * @ngdoc service
+  * @module BB.Services
+  * @name AdminBookingOptions
+  *
+  * @description
+  * Returns a set of Admin Booking configuration options
+   */
+
+  /*
+  * @ngdoc service
+  * @module BB.Services
+  * @name AdminBookingOptionsProvider
+  *
+  * @description
+  * Provider
+  *
+  * @example
+    <example>
+    angular.module('ExampleModule').config ['AdminBookingOptionsProvider', (AdminBookingOptionsProvider) ->
+      GeneralOptionsProvider.setOption('twelve_hour_format', true)
+    ]
+    </example>
+   */
   angular.module('BB.Services').provider('AdminBookingOptions', function() {
-      var options;
-      options = {
-        merge_resources: true,
-        merge_people: true,
-        day_view: 'multi_day'
-      };
-      this.setOption = function(option, value) {
-        if (options.hasOwnProperty(option)) {
-          options[option] = value;
-        }
-      };
-      this.$get = function() {
-        return options;
-      };
-    });
+    var options;
+    options = {
+      merge_resources: true,
+      merge_people: true,
+      day_view: 'multi_day'
+    };
+    this.setOption = function(option, value) {
+      if (options.hasOwnProperty(option)) {
+        options[option] = value;
+      }
+    };
+    this.$get = function() {
+      return options;
+    };
+  });
 
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').factory('AdminBookingPopup', ["$modal", "$timeout", function($modal, $timeout) {
+  'use strict';
+  angular.module('BBAdminBooking').factory('AdminBookingPopup', function($uibModal, $timeout, $document) {
     return {
       open: function(config) {
-        return $modal.open({
+        return $uibModal.open({
           size: 'lg',
-          controller: ["$scope", "$modalInstance", "config", "$window", "AdminBookingOptions", function($scope, $modalInstance, config, $window, AdminBookingOptions) {
+          appendTo: angular.element($document[0].getElementById('bb')),
+          controller: function($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
             var base;
             $scope.Math = $window.Math;
             if ($scope.bb && $scope.bb.current_item) {
@@ -901,9 +910,9 @@
               merge_people: AdminBookingOptions.merge_people
             }, config.item_defaults);
             return $scope.cancel = function() {
-              return $modalInstance.dismiss('cancel');
+              return $uibModalInstance.dismiss('cancel');
             };
-          }],
+          },
           templateUrl: 'admin_booking_popup.html',
           resolve: {
             config: function() {
@@ -913,99 +922,98 @@
         });
       }
     };
-  }]);
+  });
 
 }).call(this);
 
-
-/*
-* @ngdoc service
-* @name BBAdminBooking.service:BBAssets
-* @description
-* Gets all the resources for the callendar
- */
-
 (function() {
-  angular.module('BBAdminBooking').factory('BBAssets', ["$q", function($q) {
-      return function(company) {
-        var assets, delay, promises;
-        delay = $q.defer();
-        promises = [];
-        assets = [];
-        if (company.$has('people')) {
-          promises.push(company.getPeoplePromise().then(function(people) {
-            var i, len, p;
-            for (i = 0, len = people.length; i < len; i++) {
-              p = people[i];
-              p.title = p.name;
-              if (p.identifier == null) {
-                p.identifier = p.id + '_p';
-              }
-              p.group = 'Staff';
+  'use strict';
+
+  /*
+  * @ngdoc service
+  * @name BBAdminBooking.service:BBAssets
+  * @description
+  * Gets all the resources for the callendar
+   */
+  angular.module('BBAdminBooking').factory('BBAssets', function($q) {
+    return function(company) {
+      var assets, delay, promises;
+      delay = $q.defer();
+      promises = [];
+      assets = [];
+      if (company.$has('people')) {
+        promises.push(company.$getPeople().then(function(people) {
+          var i, len, p;
+          for (i = 0, len = people.length; i < len; i++) {
+            p = people[i];
+            p.title = p.name;
+            if (p.identifier == null) {
+              p.identifier = p.id + '_p';
             }
-            return assets = _.union(assets, people);
-          }));
-        }
-        if (company.$has('resources')) {
-          promises.push(company.getResourcesPromise().then(function(resources) {
-            var i, len, r;
-            for (i = 0, len = resources.length; i < len; i++) {
-              r = resources[i];
-              r.title = r.name;
-              if (r.identifier == null) {
-                r.identifier = r.id + '_r';
-              }
-              r.group = 'Resources ';
+            p.group = 'Staff';
+          }
+          return assets = _.union(assets, people);
+        }));
+      }
+      if (company.$has('resources')) {
+        promises.push(company.$getResources().then(function(resources) {
+          var i, len, r;
+          for (i = 0, len = resources.length; i < len; i++) {
+            r = resources[i];
+            r.title = r.name;
+            if (r.identifier == null) {
+              r.identifier = r.id + '_r';
             }
-            return assets = _.union(assets, resources);
-          }));
-        }
-        $q.all(promises).then(function() {
-          assets.sort(function(a, b) {
-            if (a.type === "person" && b.type === "resource") {
-              return -1;
-            }
-            if (a.type === "resource" && b.type === "person") {
-              return 1;
-            }
-            if (a.name > b.name) {
-              return 1;
-            }
-            if (a.name < b.name) {
-              return -1;
-            }
-            return 0;
-          });
-          return delay.resolve(assets);
+            r.group = 'Resources ';
+          }
+          return assets = _.union(assets, resources);
+        }));
+      }
+      $q.all(promises).then(function() {
+        assets.sort(function(a, b) {
+          if (a.type === "person" && b.type === "resource") {
+            return -1;
+          }
+          if (a.type === "resource" && b.type === "person") {
+            return 1;
+          }
+          if (a.name > b.name) {
+            return 1;
+          }
+          if (a.name < b.name) {
+            return -1;
+          }
+          return 0;
         });
-        return delay.promise;
-      };
-    }
-  ]);
+        return delay.resolve(assets);
+      });
+      return delay.promise;
+    };
+  });
 
 }).call(this);
 
-
-/*
-* @ngdoc service
-* @name BBAdminBooking.service:ProcessAssetsFilter
-* @description
-* Returns array of assets from a comma delimited string
- */
-
 (function() {
+  'use strict';
+
+  /*
+  * @ngdoc service
+  * @name BBAdminBooking.service:ProcessAssetsFilter
+  * @description
+  * Returns array of assets from a comma delimited string
+   */
   angular.module('BBAdminBooking').factory('ProcessAssetsFilter', function() {
-      return function(string) {
-        var assets;
-        assets = [];
-        if (typeof string === 'undefined' || string === '') {
-          return assets;
-        }
-        return angular.forEach(string.split(','), function(value) {
-          return assets.push(parseInt(decodeURIComponent(value)));
-        });
-      };
-      return assets;
-    });
+    return function(string) {
+      var assets;
+      assets = [];
+      if (typeof string === 'undefined' || string === '') {
+        return assets;
+      }
+      return angular.forEach(string.split(','), function(value) {
+        return assets.push(parseInt(decodeURIComponent(value)));
+      });
+    };
+    return assets;
+  });
 
 }).call(this);
