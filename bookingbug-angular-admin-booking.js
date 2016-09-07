@@ -156,9 +156,10 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AlertService, ValidatorService, ErrorService, $log, BBModel, $timeout, LoadingService) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AlertService, ValidatorService, ErrorService, $log, BBModel, $timeout, LoadingService, AdminBookingOptions) {
     var loader;
     $scope.validator = ValidatorService;
+    $scope.admin_options = AdminBookingOptions;
     $scope.clients = new BBModel.Pagination({
       page_size: 10,
       max_size: 5,
@@ -869,7 +870,8 @@
     options = {
       merge_resources: true,
       merge_people: true,
-      day_view: 'multi_day'
+      day_view: 'multi_day',
+      mobile_pattern: null
     };
     this.setOption = function(option, value) {
       if (options.hasOwnProperty(option)) {
