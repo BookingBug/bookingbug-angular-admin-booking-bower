@@ -936,14 +936,17 @@
   * @description
   * Gets all the resources for the callendar
    */
-  angular.module('BBAdminBooking').factory('BBAssets', function($q) {
+  angular.module('BBAdminBooking').factory('BBAssets', function($q, BBModel) {
     return function(company) {
       var assets, delay, promises;
       delay = $q.defer();
       promises = [];
       assets = [];
       if (company.$has('people')) {
-        promises.push(company.$getPeople().then(function(people) {
+        promises.push(BBModel.Admin.Person.$query({
+          company: company,
+          embed: "immediate_schedule"
+        }).then(function(people) {
           var i, len, p;
           for (i = 0, len = people.length; i < len; i++) {
             p = people[i];
@@ -957,7 +960,10 @@
         }));
       }
       if (company.$has('resources')) {
-        promises.push(company.$getResources().then(function(resources) {
+        promises.push(BBModel.Admin.Resource.$query({
+          company: company,
+          embed: "immediate_schedule"
+        }).then(function(resources) {
           var i, len, r;
           for (i = 0, len = resources.length; i < len; i++) {
             r = resources[i];
