@@ -1,0 +1,28 @@
+[bb-admin-calendar], .bb-admin-calendar {
+
+  .bb-day-nav {
+    text-align: center;
+  }
+
+  .btn-day-nav {
+    color: $gray-dark;
+    &:hover {
+      color: $gray-base;
+    }
+  }
+
+  .bb-day-nav-heading {
+    display: inline-block;
+    margin-bottom: 0;
+    font-size: $font-size-large;
+    padding: 15px 0 15px 0;
+  }
+
+  .bb-filter-icon {
+    height: 33px;
+    padding-right: 5px;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+}
