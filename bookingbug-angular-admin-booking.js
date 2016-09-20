@@ -1208,7 +1208,9 @@
           SELECT_A_SERVICE: '-- select a service --',
           SERVICE: 'Service',
           TO: 'To',
-          YES: 'Yes'
+          YES: 'Yes',
+          STEP_SUMMARY: 'Select a service',
+          SELECT_BTN: 'Select'
         }
       }
     };
