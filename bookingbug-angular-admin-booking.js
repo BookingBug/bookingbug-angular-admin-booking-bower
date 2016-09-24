@@ -477,7 +477,7 @@
 }).call(this);
 
 (function() {
-  angular.module('BBAdminBooking').directive('bbAdminMemberBookingsTable', function($uibModal, $log, $rootScope, AdminBookingService, $compile, $templateCache, ModalForm, BBModel, Dialog, AdminMoveBookingPopup) {
+  angular.module('BBAdminBooking').directive('bbAdminMemberBookingsTable', function($uibModal, $log, $rootScope, $compile, $templateCache, ModalForm, BBModel, Dialog, AdminMoveBookingPopup) {
     var controller;
     controller = function($scope, $uibModal) {
       var getBookings, updateBooking;
@@ -610,9 +610,22 @@
           url: $rootScope.bb.api_url,
           client_id: member.id
         };
-        console.log(params);
-        return AdminBookingService.query(params).then(function(bookings) {
-          $scope.booking_models = bookings.items;
+        return BBModel.Admin.Booking.$query(params).then(function(bookings) {
+          var now;
+          now = moment.unix();
+          console.log("got bookings", $scope.period, now);
+          if ($scope.period && $scope.period === "past") {
+            $scope.booking_models = _.filter(bookings.items, function(x) {
+              return x.datetime.unix() < now;
+            });
+          }
+          if ($scope.period && $scope.period === "future") {
+            $scope.booking_models = _.filter(bookings.items, function(x) {
+              return x.datetime.unix() > now;
+            });
+          } else {
+            $scope.booking_models = bookings.items;
+          }
           $scope.setRows();
           return $scope.loading = false;
         }, function(err) {
@@ -641,7 +654,8 @@
         startTime: '=?',
         endDate: '=?',
         endTime: '=?',
-        defaultOrder: '=?'
+        defaultOrder: '=?',
+        period: '@'
       }
     };
   });
