@@ -613,7 +613,6 @@
         return BBModel.Admin.Booking.$query(params).then(function(bookings) {
           var now;
           now = moment.unix();
-          console.log("got bookings", $scope.period, now);
           if ($scope.period && $scope.period === "past") {
             $scope.booking_models = _.filter(bookings.items, function(x) {
               return x.datetime.unix() < now;
