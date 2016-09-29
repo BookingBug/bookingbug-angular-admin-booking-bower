@@ -1153,13 +1153,13 @@
     var translations;
     translations = {
       ADMIN_BOOKING: {
-        AVAILABILITY: {
+        CALENDAR: {
           ANY_PERSON: 'Any person',
           ANY_RESOURCE: 'Any resource',
-          BACK: 'Back',
-          BOOK: 'Book',
-          SELECT: 'Select',
-          CALENDAR: 'Calendar',
+          BACK: '@:COMMON.BTN.BACK',
+          BOOK: '@:COMMON.BTN.BOOK',
+          SELECT: '@:COMMON.BTN.SELECT',
+          CALENDAR: '@:COMMON.TERMINOLOGY.CALENDAR',
           NOT_AVAILABLE: 'Time not available',
           CONFLICT_EXISTS: 'There\'s an availability conflict',
           CONFLICT_EXISTS_WITH_PERSON: 'with {{ person_name }}',
@@ -1179,51 +1179,67 @@
           OVERBOOK: 'Overbook',
           OVERBOOK_BTN: 'Overbook',
           OVERBOOK_WARNING: 'Overbooking ignores booking time step and availability constraints to make a booking.',
-          FILTER_BY: 'Filter by:',
+          FILTER_BY: 'Filter by',
           SELECT_A_TIME: 'Select a time',
-          SELECT_A_TIME_FOR_BOOKING: 'Select a time for the booking.'
-        },
-        CALENDAR: {
-          AFTERNOON: 'Afternoon',
-          EVENING: 'Evening',
-          MORNING: 'Morning'
+          SELECT_A_TIME_FOR_BOOKING: 'Select a time for the booking.',
+          MORNING_HEADER: '@:COMMON.TERMINOLOGY.MORNING',
+          AFTERNOON_HEADER: '@:COMMON.TERMINOLOGY.AFTERNOON',
+          EVENING_HEADER: '@:COMMON.TERMINOLOGY.EVENING'
         },
         CUSTOMER: {
-          BACK_BTN: 'Back',
-          CLEAR: 'Clear',
+          BACK_BTN: '@:COMMON.BTN.BACK',
+          CLEAR: '@:COMMON.BTN.CLEAR',
           CREATE: 'Create Customer',
           CREATE_BTN: 'Create Customer',
           CREATE_ONE_INSTEAD: 'Create one instead',
-          EMAIL: 'Email:',
-          FIRST_NAME: 'First name:',
-          LAST_NAME: 'Last name:',
-          MOBILE: 'Mobile:',
+          EMAIL: '@:COMMON.FORM.EMAIL',
+          FIRST_NAME: '@:COMMON.FORM.FIRST_NAME',
+          LAST_NAME: '@:COMMON.FORM.LAST_NAME',
+          MOBILE: '@:COMMON.FORM.MOBILE:',
           NO_RESULTS_FOUND: 'No results found',
           NUMBER: '{CUSTOMERS_NUMBER, plural, =0{no customers} =1{one customer} other{{CUSTOMERS_NUMBER} customers}} found',
           SEARCH_BY: 'Search by email or name',
           SELECT_HEADLINE: 'Select a customer',
-          SELECT_BTN: 'Select',
-          SORT_BY: 'Sort by:',
-          SORT_BY_EMAIL: 'Email',
-          SORT_BY_FIRST_NAME: 'First Name',
-          SORT_BY_LAST_NAME: 'Last Name'
+          SELECT_BTN: '@:COMMON.BTN.SELECT',
+          SORT_BY: 'Sort by',
+          SORT_BY_EMAIL: '@:COMMON.FORM.EMAIL',
+          SORT_BY_FIRST_NAME: '@:COMMON.FORM.FIRST_NAME',
+          SORT_BY_LAST_NAME: '@:COMMON.FORM.LAST_NAME',
+          ADDRESS1_LABEL: '@:COMMON.FORM.ADDRESS1',
+          ADDRESS1_VALIDATION_MSG: 'Please enter an address',
+          ADDRESS3_LABEL: '@:COMMON.FORM.ADDRESS3',
+          ADDRESS4_LABEL: '@:COMMON.FORM.ADDRESS4',
+          POSTCODE_LABEL: '@:COMMON.FORM.POSTCODE'
         },
         QUICK_PICK: {
           BLOCK_WHOLE_DAY: 'Block whole day',
           BLOCK_TIME: 'Block time',
-          BOOK: 'Book',
-          NEXT: 'Next',
+          BOOK: '@:COMMON.BTN.BOOK',
+          NEXT: '@:COMMON.BTN.CONTINUE',
           FOR: 'For',
           FROM: 'From',
           MAKE_BOOKING: 'Make booking',
-          NO: 'No',
+          NO: '@:COMMON.BTN.NO',
           SELECT: '-- select --',
           SELECT_A_SERVICE: '-- select a service --',
-          SERVICE: 'Service',
+          SERVICE: '@:COMMON.TERMINOLOGY.SERVICE',
           TO: 'To',
-          YES: 'Yes',
+          YES: '@:COMMON.BTN.YES',
+          FIELD_VALIDATION_MSG: '@:COMMON.FORM.FIELD_REQUIRED',
+          RESOURCE_PERSON_VALIDATION_MSG: 'Please select a resource or member of staff',
           STEP_SUMMARY: 'Select a service',
-          SELECT_BTN: 'Select'
+          SELECT_BTN: '@:COMMON.BTN.SELECT'
+        },
+        BOOKINGS_TABLE: {
+          CANCEL_BTN: '@:COMMON.BTN.CANCEL',
+          DETAILS_BTN: '@:COMMON.BTN.DETAILS'
+        },
+        CHECK_ITEMS: {
+          BOOKINGS_QUESTIONS_TITLE: '@:COMMON.TERMINOLOGY.QUESTIONS',
+          FIELD_VALIDATION_MSG: '@:COMMON.FORM.FIELD_REQUIRED',
+          BOOKING_NOTES_TITLE: 'Booking Notes',
+          BOOK_BTN: '@:COMMON.BTN.BOOK',
+          BACK_BTN: '@:COMMON.BTN.BACK'
         }
       }
     };
