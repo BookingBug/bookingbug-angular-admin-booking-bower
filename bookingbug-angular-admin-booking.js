@@ -116,7 +116,11 @@
       return $scope.calendar_view[view] = true;
     };
     $scope.pickTime = function(slot) {
+      $scope.bb.current_item.setDate({
+        date: slot.datetime
+      });
       $scope.bb.current_item.setTime(slot);
+      $scope.setLastSelectedDate(slot.datetime);
       if ($scope.bb.current_item.reserve_ready) {
         return $scope.addItemToBasket().then((function(_this) {
           return function() {
