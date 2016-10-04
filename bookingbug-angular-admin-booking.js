@@ -621,8 +621,7 @@
             $scope.booking_models = _.filter(bookings.items, function(x) {
               return x.datetime.unix() < now;
             });
-          }
-          if ($scope.period && $scope.period === "future") {
+          } else if ($scope.period && $scope.period === "future") {
             $scope.booking_models = _.filter(bookings.items, function(x) {
               return x.datetime.unix() > now;
             });
