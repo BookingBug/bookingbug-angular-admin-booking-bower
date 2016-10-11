@@ -483,7 +483,7 @@
 (function() {
   angular.module('BBAdminBooking').directive('bbAdminMemberBookingsTable', function($uibModal, $log, $rootScope, $compile, $templateCache, ModalForm, BBModel, Dialog, AdminMoveBookingPopup) {
     var controller;
-    controller = function($scope, $uibModal) {
+    controller = function($document, $scope, $uibModal) {
       var getBookings, updateBooking;
       $scope.loading = true;
       $scope.fields || ($scope.fields = ['date_order', 'details']);
@@ -556,6 +556,7 @@
           return b.id === id;
         });
         modalInstance = $uibModal.open({
+          appendTo: angular.element($document[0].getElementById('bb')),
           templateUrl: 'member_bookings_table_cancel_booking.html',
           controller: function($scope, $uibModalInstance, booking) {
             $scope.booking = booking;
@@ -868,6 +869,7 @@
           if (!isValid()) {
             return false;
           }
+          $scope.loading = true;
           params = {
             start_time: $scope.bb.from_datetime,
             end_time: $scope.bb.to_datetime,
@@ -899,6 +901,7 @@
         };
         blockSuccess = function(response) {
           $rootScope.$broadcast('refetchBookings');
+          $scope.loading = false;
           return $scope.cancel();
         };
         return $scope.changeBlockDay = function(blockDay) {
