@@ -556,7 +556,6 @@
           return b.id === id;
         });
         modalInstance = $uibModal.open({
-          appendTo: angular.element($document[0].getElementById('bb')),
           templateUrl: 'member_bookings_table_cancel_booking.html',
           controller: function($scope, $uibModalInstance, booking) {
             $scope.booking = booking;
@@ -759,7 +758,6 @@
       open: function(config) {
         var modal;
         modal = $uibModal.open({
-          appendTo: angular.element($document[0].getElementById('bb')),
           size: 'lg',
           controller: function($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
             var base;
@@ -1051,7 +1049,6 @@
       open: function(config) {
         return $uibModal.open({
           size: 'lg',
-          appendTo: angular.element($document[0].getElementById('bb')),
           controller: function($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
             var base;
             $scope.Math = $window.Math;
