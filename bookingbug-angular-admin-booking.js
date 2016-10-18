@@ -612,7 +612,8 @@
           end_time: $scope.endTime ? $scope.endTime.format('HH:mm') : void 0,
           company: $rootScope.bb.company,
           url: $rootScope.bb.api_url,
-          client_id: member.id
+          client_id: member.id,
+          skip_cache: true
         };
         return BBModel.Admin.Booking.$query(params).then(function(bookings) {
           var now;
@@ -1216,7 +1217,18 @@
           OVERBOOK_WARNING: 'Overbooking ignores booking time step and availability constraints to make a booking.',
           FILTER_BY: 'Filter by:',
           SELECT_A_TIME: 'Select a time',
-          SELECT_A_TIME_FOR_BOOKING: 'Select a time for the booking.'
+          SELECT_A_TIME_FOR_BOOKING: 'Select a time for the booking.',
+          OVERLAPPING_BOOKINGS: 'The following bookings look like they are clashing with this requested time',
+          NEARBY_BOOKINGS: 'The following nearby bookings might be clashing with this requested time',
+          EXTERNAL_BOOKINGS: 'The following external calendar bookings look like they are clashing with this requested time',
+          ALTERNATIVE_TIME_NO_OVERBOOKING: 'It looks like the booking step that service was configured for doesn\'t allow that time. You can select an alternative time, or you can try booking the requested time anyway, however making double bookings is not allowed by your business configuration settings',
+          ALTERNATIVE_TIME_ALLOW_OVERBOOKING: 'The following external calendar bookings look like they are clashing with this requested time',
+          CLOSEST_TIME_NO_OVERBOOKING: 'Looks like that time wasn\'t available. This could just be because it would outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway, however double bookings aren\'t allowed by your company configuration settings',
+          CLOSEST_TIME_ALLOW_OVERBOOKING: 'Looks like that time wasn\'t available. This could just be because it would outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway',
+          CLOSEST_EARLIER_TIME_BTN: 'Closest Earlier',
+          CLOSEST_LATER_TIME_BTN: 'Closest Later',
+          REQUESTED_TIME_BTN: 'Requested Time',
+          FIND_ANOTHER_TIME_BTN: 'Find another time'
         },
         CALENDAR: {
           AFTERNOON: 'Afternoon',
