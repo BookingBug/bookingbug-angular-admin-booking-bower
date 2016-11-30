@@ -341,7 +341,8 @@
     };
     return {
       link: link,
-      controller: 'BBCtrl'
+      controller: 'BBCtrl',
+      scope: true
     };
   });
 
