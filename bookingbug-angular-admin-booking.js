@@ -156,7 +156,7 @@
     };
   });
 
-  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, AlertService, ClientService, ValidatorService, ErrorService, $log, BBModel, $timeout) {
+  angular.module('BBAdminBooking').controller('adminBookingClients', function($scope, $rootScope, $q, AdminClientService, AdminBookingOptions, AlertService, ClientService, ValidatorService, ErrorService, $log, BBModel, $timeout) {
     $scope.validator = ValidatorService;
     $scope.clients = new BBModel.Pagination({
       page_size: 10,
@@ -231,6 +231,9 @@
         order_by_reverse: params.order_by_reverse,
         page: params.page || 1
       };
+      if (AdminBookingOptions.use_default_company_id) {
+        $scope.params.default_company_id = $scope.bb.company.id;
+      }
       $scope.notLoaded($scope);
       return AdminClientService.query($scope.params).then(function(result) {
         $scope.search_complete = true;
@@ -249,6 +252,9 @@
         filter_by: search_text,
         company: $scope.bb.company
       };
+      if (AdminBookingOptions.use_default_company_id) {
+        params.default_company_id = $scope.bb.company.id;
+      }
       AdminClientService.query(params).then((function(_this) {
         return function(clients) {
           defer.resolve(clients.items);
@@ -865,7 +871,8 @@
       options = {
         merge_resources: true,
         merge_people: true,
-        day_view: 'multi_day'
+        day_view: 'multi_day',
+        use_default_company_id: false
       };
       this.setOption = function(option, value) {
         if (options.hasOwnProperty(option)) {
