@@ -1,6 +1,6 @@
 [bb-admin-booking-clients] {
 
-  .bb-admin-typehead-wrapper {
+  .bb-admin-typeahead-wrapper {
     margin-bottom: 20px;
     .dropdown-menu{
       max-height: 500px;
@@ -17,7 +17,7 @@
     }
   }
 
-  .bb-typehead-results-wrapper {
+  .bb-typeahead-results-wrapper {
     padding: 10px 15px 5px;
     border: 1px solid $secondary-border-color;
     border-top: 0px;
