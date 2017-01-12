@@ -64,16 +64,111 @@
 
 (function() {
   'use strict';
+  var BBAdminResourcesDropdownCtrl;
+
+  angular.module('BBAdminBooking').component('bbAdminResourcesDropdown', {
+    bindings: {
+      formCtrl: '<'
+    },
+    controller: 'BBAdminResourcesDropdownCtrl',
+    controllerAs: '$bbAdminResourcesDropdownCtrl',
+    require: {
+      $bbCtrl: '^^bbAdminBooking'
+    },
+    templateUrl: 'admin-booking/admin_resources_dropdown.html'
+  });
+
+  BBAdminResourcesDropdownCtrl = function(BBAssets, $rootScope, $scope) {
+    'ngInject';
+    var changeResource, resourceChangedListener, setCurrentResource, setLoadedResources;
+    this.pickedResource = null;
+    this.resources = [];
+    this._resourceChangedUnSubscribe = null;
+    this.$onInit = (function(_this) {
+      return function() {
+        _this.changeResource = changeResource;
+        BBAssets.getAssets(_this.$bbCtrl.$scope.bb.company).then(setLoadedResources);
+        _this._resourceChangedUnSubscribe = $scope.$on('bbAdminResourcesDropdown:resourceChanged', resourceChangedListener);
+      };
+    })(this);
+    this.$onDestroy = (function(_this) {
+      return function() {
+        _this._resourceChangedUnSubscribe();
+      };
+    })(this);
+    resourceChangedListener = (function(_this) {
+      return function(event) {
+        var i, len, ref, resource, resourceKey, type;
+        if (_this.pickedResource == null) {
+          delete _this.$bbCtrl.$scope.bb.current_item.resource;
+          delete _this.$bbCtrl.$scope.bb.current_item.person;
+          return;
+        }
+        type = _this.pickedResource.split('_')[1];
+        ref = _this.resources;
+        for (resourceKey = i = 0, len = ref.length; i < len; resourceKey = ++i) {
+          resource = ref[resourceKey];
+          if (resource.identifier === _this.pickedResource) {
+            if (type === 'p') {
+              _this.$bbCtrl.$scope.bb.current_item.person = resource;
+              _this.pickedResource = resource;
+              delete _this.$bbCtrl.$scope.bb.current_item.resource;
+            } else if (type === 'r') {
+              _this.$bbCtrl.$scope.bb.current_item.resource = resource;
+              _this.pickedResource = resource;
+              delete _this.$bbCtrl.$scope.bb.current_item.person;
+            }
+            break;
+          }
+        }
+      };
+    })(this);
+
+    /**
+    * @param {Array} resources
+     */
+    setLoadedResources = (function(_this) {
+      return function(resources) {
+        _this.resources = resources;
+        setCurrentResource();
+      };
+    })(this);
+    setCurrentResource = (function(_this) {
+      return function() {
+        if ((_this.$bbCtrl.$scope.bb.current_item.person != null) && (_this.$bbCtrl.$scope.bb.current_item.person.id != null)) {
+          _this.pickedResource = _this.$bbCtrl.$scope.bb.current_item.person;
+          _this.pickedResource.identifier = _this.$bbCtrl.$scope.bb.current_item.person.id + '_p';
+        } else if ((_this.$bbCtrl.$scope.bb.current_item.resource != null) && (_this.$bbCtrl.$scope.bb.current_item.resource.id != null)) {
+          _this.pickedResource = _this.$bbCtrl.$scope.bb.current_item.resource;
+          _this.pickedResource.identifier = _this.$bbCtrl.$scope.bb.current_item.resource.id + '_r';
+        }
+      };
+    })(this);
+    changeResource = (function(_this) {
+      return function() {
+        $rootScope.$broadcast('bbAdminResourcesDropdown:resourceChanged');
+      };
+    })(this);
+  };
+
+  angular.module('BBAdminBooking').controller('BBAdminResourcesDropdownCtrl', BBAdminResourcesDropdownCtrl);
+
+}).call(this);
+
+(function() {
+  'use strict';
+  var BBAdminCalendarConflictCtrl, BBAdminCalendarCtrl;
+
   angular.module('BB.Directives').directive('bbAdminCalendar', function() {
     return {
       restrict: 'AE',
       replace: true,
       scope: true,
-      controller: 'adminCalendarCtrl'
+      controller: 'BBAdminCalendarCtrl'
     };
   });
 
-  angular.module('BB.Controllers').controller('adminCalendarCtrl', function($scope, $element, $controller, $attrs, BBModel, $rootScope) {
+  BBAdminCalendarCtrl = function($scope, $element, $controller, $attrs, BBModel, $rootScope) {
     angular.extend(this, $controller('TimeList', {
       $scope: $scope,
       $attrs: $attrs,
@@ -170,97 +265,114 @@
         return $scope.decideNextPage();
       }
     };
-  });
+  };
+
+  angular.module('BB.Controllers').controller('BBAdminCalendarCtrl', BBAdminCalendarCtrl);
 
   angular.module('BB.Directives').directive('bbAdminCalendarConflict', function() {
     return {
       restrict: 'AE',
       replace: true,
       scope: true,
-      controller: function($scope, $element, $controller, $attrs, BBModel, $rootScope) {
-        var duration, en, end_time, i, ibest_earlier, ibest_later, len, max_time, min_time, params, ref, service, slot, st, start_datetime, time;
-        time = $scope.bb.current_item.defaults.time;
-        duration = $scope.bb.current_item.duration;
-        end_time = time + $scope.bb.current_item.duration;
-        start_datetime = $scope.bb.current_item.defaults.datetime;
-        service = $scope.bb.current_item.service;
-        min_time = start_datetime.clone().add(-(service.pre_time || 0), 'minutes');
-        max_time = start_datetime.clone().add(duration + (service.post_time || 0), 'minutes');
-        st = time - 30;
-        en = time + duration + 30;
-        ibest_earlier = 0;
-        ibest_later = 0;
-        $scope.allow_overbook = $scope.bb.company.settings.has_overbook;
-        if ($scope.slots) {
-          ref = $scope.slots;
-          for (i = 0, len = ref.length; i < len; i++) {
-            slot = ref[i];
-            if (time > slot.time) {
-              ibest_earlier = slot.time;
-              $scope.best_earlier = slot;
-            }
-            if (ibest_later === 0 && slot.time > time) {
-              ibest_later = slot.time;
-              $scope.best_later = slot;
-            }
-          }
-        }
-        if (ibest_earlier > 0 && ibest_later > 0 && ibest_earlier > time - duration && ibest_later < time + duration) {
-          $scope.step_mismatch = true;
-        }
-        $scope.checking_conflicts = true;
-        params = {
-          src: $scope.bb.company,
-          person_id: $scope.bb.current_item.defaults.person ? $scope.bb.current_item.defaults.person.id : void 0,
-          resource_id: $scope.bb.current_item.defaults.resource ? $scope.bb.current_item.defaults.resource_id : void 0,
-          start_date: $scope.bb.current_item.defaults.datetime.format('YYYY-MM-DD'),
-          start_time: sprintf("%02d:%02d", st / 60, st % 60),
-          end_time: sprintf("%02d:%02d", en / 60, en % 60)
-        };
-        return BBModel.Admin.Booking.$query(params).then(function(bookings) {
-          if (bookings.items.length > 0) {
-            $scope.nearby_bookings = _.filter(bookings.items, function(x) {
-              return ($scope.bb.current_item.defaults.person && x.person_id === $scope.bb.current_item.defaults.person.id) || ($scope.bb.current_item.defaults.resources && x.resources_id === $scope.bb.current_item.defaults.resources.id);
-            });
-            $scope.overlapping_bookings = _.filter($scope.nearby_bookings, function(x) {
-              var b_en, b_st;
-              b_st = moment(x.datetime).subtract(-(x.pre_time || 0), "minutes");
-              b_en = moment(x.end_datetime).subtract(x.post_time || 0, "minutes");
-              return (b_st.isBefore(max_time)) && (b_en.isAfter(min_time));
-            });
-            if ($scope.nearby_bookings.length === 0) {
-              $scope.nearby_bookings = false;
-            }
-            if ($scope.overlapping_bookings.length === 0) {
-              $scope.overlapping_bookings = false;
-            }
-          }
-          if (!$scope.overlapping_bookings && $scope.bb.company.$has('external_bookings')) {
-            params = {
-              start: $scope.bb.current_item.defaults.datetime.format('YYYY-MM-DD'),
-              end: $scope.bb.current_item.defaults.datetime.clone().add(1, 'day').format('YYYY-MM-DD'),
-              person_id: $scope.bb.current_item.defaults.person ? $scope.bb.current_item.defaults.person.id : void 0,
-              resource_id: $scope.bb.current_item.defaults.resource ? $scope.bb.current_item.defaults.resource_id : void 0
-            };
-            $scope.bb.company.$get('external_bookings', params).then(function(collection) {
-              bookings = collection.external_bookings;
-              if (bookings && bookings.length > 0) {
-                return $scope.external_bookings = _.filter(bookings, function(x) {
-                  x.start_time = moment(x.start);
-                  x.end_time = moment(x.end);
-                  x.title || (x.title = "Blocked");
-                  return (x.start_time.isBefore(max_time)) && (x.end_time.isAfter(min_time));
-                });
-              }
-            });
-          }
-          return $scope.checking_conflicts = false;
-        }, function(err) {
-          return $scope.checking_conflicts = false;
-        });
-      }
+      controller: BBAdminCalendarConflictCtrl
     };
   });
+
+  BBAdminCalendarConflictCtrl = function($scope, $element, $controller, $attrs, BBModel) {
+    'ngInject';
+    var duration, en, end_time, getCurrentPersonId, i, ibest_earlier, ibest_later, len, max_time, min_time, params, ref, service, slot, st, start_datetime, time;
+    time = $scope.bb.current_item.defaults.time;
+    duration = $scope.bb.current_item.duration;
+    end_time = time + $scope.bb.current_item.duration;
+    start_datetime = $scope.bb.current_item.defaults.datetime;
+    service = $scope.bb.current_item.service;
+    min_time = start_datetime.clone().add(-(service.pre_time || 0), 'minutes');
+    max_time = start_datetime.clone().add(duration + (service.post_time || 0), 'minutes');
+    st = time - 30;
+    en = time + duration + 30;
+    ibest_earlier = 0;
+    ibest_later = 0;
+    $scope.allow_overbook = $scope.bb.company.settings.has_overbook;
+    if ($scope.slots) {
+      ref = $scope.slots;
+      for (i = 0, len = ref.length; i < len; i++) {
+        slot = ref[i];
+        if (time > slot.time) {
+          ibest_earlier = slot.time;
+          $scope.best_earlier = slot;
+        }
+        if (ibest_later === 0 && slot.time > time) {
+          ibest_later = slot.time;
+          $scope.best_later = slot;
+        }
+      }
+    }
+    if (ibest_earlier > 0 && ibest_later > 0 && ibest_earlier > time - duration && ibest_later < time + duration) {
+      $scope.step_mismatch = true;
+    }
+    $scope.checking_conflicts = true;
+
+    /**
+     * @returns {Number}
+     */
+    getCurrentPersonId = function() {
+      if ($scope.bb.current_item.person != null) {
+        return $scope.bb.current_item.person.id;
+      }
+      if ($scope.bb.current_item.defaults.person != null) {
+        return $scope.bb.current_item.defaults.person.id;
+      }
+    };
+    params = {
+      src: $scope.bb.company,
+      person_id: getCurrentPersonId(),
+      resource_id: $scope.bb.current_item.defaults.resource ? $scope.bb.current_item.defaults.resource_id : void 0,
+      start_date: $scope.bb.current_item.defaults.datetime.format('YYYY-MM-DD'),
+      start_time: sprintf("%02d:%02d", st / 60, st % 60),
+      end_time: sprintf("%02d:%02d", en / 60, en % 60)
+    };
+    BBModel.Admin.Booking.$query(params).then(function(bookings) {
+      if (bookings.items.length > 0) {
+        $scope.nearby_bookings = _.filter(bookings.items, function(x) {
+          return ($scope.bb.current_item.defaults.person && x.person_id === $scope.bb.current_item.defaults.person.id) || ($scope.bb.current_item.defaults.resources && x.resources_id === $scope.bb.current_item.defaults.resources.id);
+        });
+        $scope.overlapping_bookings = _.filter($scope.nearby_bookings, function(x) {
+          var b_en, b_st;
+          b_st = moment(x.datetime).subtract(-(x.pre_time || 0), "minutes");
+          b_en = moment(x.end_datetime).subtract(x.post_time || 0, "minutes");
+          return (b_st.isBefore(max_time)) && (b_en.isAfter(min_time));
+        });
+        if ($scope.nearby_bookings.length === 0) {
+          $scope.nearby_bookings = false;
+        }
+        if ($scope.overlapping_bookings.length === 0) {
+          $scope.overlapping_bookings = false;
+        }
+      }
+      if (!$scope.overlapping_bookings && $scope.bb.company.$has('external_bookings')) {
+        params = {
+          start: $scope.bb.current_item.defaults.datetime.format('YYYY-MM-DD'),
+          end: $scope.bb.current_item.defaults.datetime.clone().add(1, 'day').format('YYYY-MM-DD'),
+          person_id: $scope.bb.current_item.defaults.person ? $scope.bb.current_item.defaults.person.id : void 0,
+          resource_id: $scope.bb.current_item.defaults.resource ? $scope.bb.current_item.defaults.resource_id : void 0
+        };
+        $scope.bb.company.$get('external_bookings', params).then(function(collection) {
+          bookings = collection.external_bookings;
+          if (bookings && bookings.length > 0) {
+            return $scope.external_bookings = _.filter(bookings, function(x) {
+              x.start_time = moment(x.start);
+              x.end_time = moment(x.end);
+              x.title || (x.title = "Blocked");
+              return (x.start_time.isBefore(max_time)) && (x.end_time.isAfter(min_time));
+            });
+          }
+        });
+      }
+      return $scope.checking_conflicts = false;
+    }, function(err) {
+      return $scope.checking_conflicts = false;
+    });
+  };
 
 }).call(this);
 
@@ -324,10 +436,10 @@
         }, function(err) {
           if (err.data && err.data.error === "Please Login") {
             loader.setLoaded();
-            return AlertService.raise('EMAIL_ALREADY_REGISTERED_ADMIN');
+            return AlertService.raise('EMAIL_IN_USE');
           } else if (err.data && err.data.error === "Sorry, it appears that this phone number already exists") {
             loader.setLoaded();
-            return AlertService.raise('PHONE_NUMBER_ALREADY_REGISTERED_ADMIN');
+            return AlertService.raise('PHONE_NUMBER_IN_USE');
           } else {
             return loader.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
           }
@@ -824,106 +936,95 @@
 
 (function() {
   'use strict';
+  var BBBlockTimeCtrl;
+
+  BBBlockTimeCtrl = function($scope, $element, $attrs, BBModel, BookingCollections, $rootScope, BBAssets) {
+    'ngInject';
+    var blockSuccess, isValid;
+    $scope.resources = [];
+    $scope.resourceError = false;
+    BBAssets.getAssets($scope.bb.company).then(function(assets) {
+      return $scope.resources = assets;
+    });
+    if (!moment.isMoment($scope.bb.to_datetime)) {
+      $scope.bb.to_datetime = moment($scope.bb.to_datetime);
+    }
+    if (!moment.isMoment($scope.bb.from_datetime)) {
+      $scope.bb.from_datetime = moment($scope.bb.from_datetime);
+    }
+    if (!moment.isMoment($scope.bb.to_datetime)) {
+      $scope.bb.to_datetime = moment($scope.bb.to_datetime);
+    }
+    if ($scope.bb.min_date && !moment.isMoment($scope.bb.min_date)) {
+      $scope.bb.min_date = moment($scope.bb.min_date);
+    }
+    if ($scope.bb.max_date && !moment.isMoment($scope.bb.max_date)) {
+      $scope.bb.max_date = moment($scope.bb.max_date);
+    }
+    $scope.all_day = false;
+    $scope.hideBlockAllDay = Math.abs($scope.bb.from_datetime.diff($scope.bb.to_datetime, 'days')) > 0;
+    if ($scope.bb.company_settings && $scope.bb.company_settings.$has('block_questions')) {
+      $scope.bb.company_settings.$get("block_questions", {}).then((function(_this) {
+        return function(details) {
+          return $scope.block_questions = new BBModel.ItemDetails(details);
+        };
+      })(this));
+    }
+    $scope.blockTime = function(form) {
+      var params;
+      if (form == null) {
+        console.error('blockTime requires form as first argument');
+        return false;
+      }
+      form.$setSubmitted();
+      if (form.$invalid || !isValid()) {
+        return false;
+      }
+      $scope.loading = true;
+      params = {
+        start_time: $scope.bb.from_datetime,
+        end_time: $scope.bb.to_datetime,
+        booking: true,
+        allday: $scope.all_day
+      };
+      if ($scope.block_questions) {
+        params.questions = $scope.block_questions.getPostData();
+      }
+      if (typeof $scope.bb.current_item.person === 'object') {
+        return BBModel.Admin.Person.$block($scope.bb.company, $scope.bb.current_item.person, params).then(function(response) {
+          return blockSuccess(response);
+        });
+      } else if (typeof $scope.bb.current_item.resource === 'object') {
+        return BBModel.Admin.Resource.$block($scope.bb.company, $scope.bb.current_item.resource, params).then(function(response) {
+          return blockSuccess(response);
+        });
+      }
+    };
+    isValid = function() {
+      $scope.resourceError = false;
+      if (typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') {
+        $scope.resourceError = true;
+      }
+      if ((typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') || ($scope.bb.from_datetime == null) || !$scope.bb.to_datetime) {
+        return false;
+      }
+      return true;
+    };
+    blockSuccess = function(response) {
+      $rootScope.$broadcast('refetchBookings');
+      $scope.loading = false;
+      return $scope.cancel();
+    };
+    $scope.changeBlockDay = function(blockDay) {
+      return $scope.all_day = blockDay;
+    };
+  };
+
   angular.module('BBAdminBooking').directive('bbBlockTime', function() {
     return {
       scope: true,
       restrict: 'A',
-      controller: function($scope, $element, $attrs, BBModel, BookingCollections, $rootScope, BBAssets) {
-        var blockSuccess, isValid;
-        $scope.resources = [];
-        BBAssets($scope.bb.company).then(function(assets) {
-          return $scope.resources = assets;
-        });
-        if (!moment.isMoment($scope.bb.to_datetime)) {
-          $scope.bb.to_datetime = moment($scope.bb.to_datetime);
-        }
-        if (!moment.isMoment($scope.bb.from_datetime)) {
-          $scope.bb.from_datetime = moment($scope.bb.from_datetime);
-        }
-        if (!moment.isMoment($scope.bb.to_datetime)) {
-          $scope.bb.to_datetime = moment($scope.bb.to_datetime);
-        }
-        if ($scope.bb.min_date && !moment.isMoment($scope.bb.min_date)) {
-          $scope.bb.min_date = moment($scope.bb.min_date);
-        }
-        if ($scope.bb.max_date && !moment.isMoment($scope.bb.max_date)) {
-          $scope.bb.max_date = moment($scope.bb.max_date);
-        }
-        $scope.all_day = false;
-        $scope.hideBlockAllDay = Math.abs($scope.bb.from_datetime.diff($scope.bb.to_datetime, 'days')) > 0;
-        if (($scope.bb.current_item.person != null) && ($scope.bb.current_item.person.id != null)) {
-          $scope.picked_resource = $scope.bb.current_item.person.id + '_p';
-        }
-        if (($scope.bb.current_item.resource != null) && ($scope.bb.current_item.resource.id != null)) {
-          $scope.picked_resource = $scope.bb.current_item.resource.id + '_r';
-        }
-        if ($scope.bb.company_settings && $scope.bb.company_settings.$has('block_questions')) {
-          $scope.bb.company_settings.$get("block_questions", {}).then((function(_this) {
-            return function(details) {
-              return $scope.block_questions = new BBModel.ItemDetails(details);
-            };
-          })(this));
-        }
-        $scope.changeResource = function() {
-          var parts;
-          if ($scope.picked_resource != null) {
-            $scope.resourceError = false;
-            parts = $scope.picked_resource.split('_');
-            return angular.forEach($scope.resources, function(value, key) {
-              if (value.identifier === $scope.picked_resource) {
-                if (parts[1] === 'p') {
-                  $scope.bb.current_item.person = value;
-                } else if (parts[1] === 'r') {
-                  $scope.bb.current_item.resource = value;
-                }
-              }
-            });
-          }
-        };
-        $scope.blockTime = function() {
-          var params;
-          if (!isValid()) {
-            return false;
-          }
-          $scope.loading = true;
-          params = {
-            start_time: $scope.bb.from_datetime,
-            end_time: $scope.bb.to_datetime,
-            booking: true,
-            allday: $scope.all_day
-          };
-          if ($scope.block_questions) {
-            params.questions = $scope.block_questions.getPostData();
-          }
-          if (typeof $scope.bb.current_item.person === 'object') {
-            return BBModel.Admin.Person.$block($scope.bb.company, $scope.bb.current_item.person, params).then(function(response) {
-              return blockSuccess(response);
-            });
-          } else if (typeof $scope.bb.current_item.resource === 'object') {
-            return BBModel.Admin.Resource.$block($scope.bb.company, $scope.bb.current_item.resource, params).then(function(response) {
-              return blockSuccess(response);
-            });
-          }
-        };
-        isValid = function() {
-          $scope.resourceError = false;
-          if (typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') {
-            $scope.resourceError = true;
-          }
-          if ((typeof $scope.bb.current_item.person !== 'object' && typeof $scope.bb.current_item.resource !== 'object') || ($scope.bb.from_datetime == null) || !$scope.bb.to_datetime) {
-            return false;
-          }
-          return true;
-        };
-        blockSuccess = function(response) {
-          $rootScope.$broadcast('refetchBookings');
-          $scope.loading = false;
-          return $scope.cancel();
-        };
-        return $scope.changeBlockDay = function(blockDay) {
-          return $scope.all_day = blockDay;
-        };
-      }
+      controller: BBBlockTimeCtrl
     };
   });
 
@@ -1111,8 +1212,12 @@
   * @description
   * Gets all the resources for the callendar
    */
-  angular.module('BBAdminBooking').factory('BBAssets', function($q, BBModel) {
-    return function(company) {
+  var BBAssets;
+
+  BBAssets = function(BBModel, $q, $translate) {
+    'ngInject';
+    var getAssets;
+    getAssets = function(company) {
       var assets, delay, promises;
       delay = $q.defer();
       promises = [];
@@ -1129,7 +1234,7 @@
             if (p.identifier == null) {
               p.identifier = p.id + '_p';
             }
-            p.group = 'Staff';
+            p.group = $translate.instant('ADMIN_BOOKING.ASSETS.STAFF_GROUP_LABEL');
           }
           return assets = _.union(assets, people);
         }));
@@ -1146,7 +1251,7 @@
             if (r.identifier == null) {
               r.identifier = r.id + '_r';
             }
-            r.group = 'Resources ';
+            r.group = $translate.instant('ADMIN_BOOKING.ASSETS.RESOURCES_GROUP_LABEL');
           }
           return assets = _.union(assets, resources);
         }));
@@ -1171,7 +1276,12 @@
       });
       return delay.promise;
     };
-  });
+    return {
+      getAssets: getAssets
+    };
+  };
+
+  angular.module('BBAdminBooking').factory('BBAssets', BBAssets);
 
 }).call(this);
 
@@ -1207,6 +1317,10 @@
     var translations;
     translations = {
       ADMIN_BOOKING: {
+        ASSETS: {
+          RESOURCES_GROUP_LABEL: "@:COMMON.TERMINOLOGY.RESOURCES",
+          STAFF_GROUP_LABEL: "@:COMMON.TERMINOLOGY.STAFF"
+        },
         CALENDAR: {
           STEP_HEADING: "Select a time",
           TIME_NOT_AVAILABLE_STEP_HEADING: "Time not available",
@@ -1217,8 +1331,8 @@
           CALENDAR_PANEL_HEADING: "@:COMMON.TERMINOLOGY.CALENDAR",
           NOT_AVAILABLE: "Time not available: {{time | datetime: 'lll'}}",
           CONFLICT_EXISTS: "There\'s an availability conflict",
-          CONFLICT_EXISTS_WITH_PERSON: "with {{ person_name }}",
-          CONFLICT_EXISTS_IN_RESOURCE: "in {{ resource_name }}",
+          CONFLICT_EXISTS_WITH_PERSON: "with {{person_name}}",
+          CONFLICT_EXISTS_IN_RESOURCE: "in {{resource_name}}",
           CONFLICT_RESULT_OF: "This can be the result of:",
           CONFLICT_REASON_ALREADY_BOOKED: "The Staff/Resource being booked or blocked already",
           CONFLICT_REASON_NOT_ENOUGH_TIME: "Not enough available time to complete the booking before an existing one starts",
@@ -1241,8 +1355,8 @@
           EXTERNAL_BOOKING_DESCRIPTION: "{{title}} from {{from | datetime: 'lll'}} to {{to | datetime: 'lll'}}",
           ALTERNATIVE_TIME_NO_OVERBOOKING: "It looks like the booking step that service was configured for doesn't allow that time. You can select an alternative time, or you can try booking the requested time anyway, however making double bookings is not allowed by your business configuration settings",
           ALTERNATIVE_TIME_ALLOW_OVERBOOKING: "The following external calendar bookings look like they are clashing with this requested time",
-          CLOSEST_TIME_NO_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway, however double bookings aren\'t allowed by your company configuration settings",
-          CLOSEST_TIME_ALLOW_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway",
+          CLOSEST_TIME_NO_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway, however double bookings aren\'t allowed by your company configuration settings",
+          CLOSEST_TIME_ALLOW_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway",
           CLOSEST_EARLIER_TIME_BTN: "Closest Earlier: {{closest_earlier | datetime: 'LT'}}",
           CLOSEST_LATER_TIME_BTN: "Closest Later: {{cloest_later | datetime: 'LT'}}",
           REQUESTED_TIME_BTN: "Requested Time: {{requested_time: datetime: 'LT'}}",
@@ -1257,10 +1371,10 @@
           CREATE_HEADING: "Create Customer",
           CREATE_BTN: "Create Customer",
           CREATE_ONE_INSTEAD_BTN: "Create one instead",
-          EMAIL: "@:COMMON.TERMINOLOGY.EMAIL",
-          FIRST_NAME: "@:COMMON.TERMINOLOGY.FIRST_NAME",
-          LAST_NAME: "@:COMMON.TERMINOLOGY.LAST_NAME",
-          MOBILE: "@:COMMON.TERMINOLOGY.MOBILE:",
+          EMAIL_LBL: "@:COMMON.TERMINOLOGY.EMAIL",
+          FIRST_NAME_LBL: "@:COMMON.TERMINOLOGY.FIRST_NAME",
+          LAST_NAME_LBL: "@:COMMON.TERMINOLOGY.LAST_NAME",
+          MOBILE_LBL: "@:COMMON.TERMINOLOGY.MOBILE",
           NO_RESULTS_FOUND: "No results found",
           NUM_CUSTOMERS: "{CUSTOMERS_NUMBER, plural, =0{no customers} =1{one customer} other{{CUSTOMERS_NUMBER} customers}} found",
           SEARCH_BY_PLACEHOLDER: "Search by email or name",
@@ -1279,17 +1393,21 @@
         QUICK_PICK: {
           BLOCK_WHOLE_DAY: "Block whole day",
           BLOCK_TIME_TAB_HEADING: "Block time",
-          FOR_LBL: "From",
+          BLOCK_TIME_TAB_HEADING: "Block",
           MAKE_BOOKING_TAB_HEADING: "Make booking",
-          NO_OPTION: "@:COMMON.BTN.NO",
-          RESOURCE_DEFAULT_OPTION: "-- select --",
+          PERSON_LABEL: "@:COMMON.TERMINOLOGY.PERSON",
+          PERSON_DEFAULT_OPTION: "Any Person",
+          RESOURCE_LABEL: "@:COMMON.TERMINOLOGY.RESOURCE",
+          RESOURCE_DEFAULT_OPTION: "Any Resource",
+          FROM_LBL: "From",
+          SERVICE_LABEL: 'Select a service',
+          SERVICE_DEFAULT_OPTION: "-- select --",
+          SERVICE_REQUIRED_MSG: 'Please select a service',
           TO_LBL: "To",
           YES_OPTION: "@:COMMON.BTN.YES",
-          RESOURCE_PERSON_VALIDATION_MSG: "Please select a resource or member of staff",
-          STEP_SUMMARY: "Select a service",
-          SELECT_BTN: "@:COMMON.BTN.SELECT",
-          FIELD_REQUIRED: "@:COMMON.FORM.FIELD_REQUIRED",
-          BLOCK_TIME_BTN: "Block time"
+          NO_OPTION: "@:COMMON.BTN.NO",
+          NEXT_BTN: "@:COMMON.BTN.NEXT",
+          FIELD_REQUIRED: "@:COMMON.FORM.FIELD_REQUIRED"
         },
         BOOKINGS_TABLE: {
           CANCEL_BTN: "@:COMMON.BTN.CANCEL",
