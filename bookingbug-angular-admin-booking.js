@@ -195,6 +195,7 @@
         if ($scope.client_details) {
           $scope.client.setClientDetails($scope.client_details);
         }
+        $scope.client.default_company_id = $scope.bb.company.id;
         return ClientService.create_or_update($scope.bb.company, $scope.client).then(function(client) {
           $scope.setLoaded($scope);
           return $scope.selectClient(client, route);
