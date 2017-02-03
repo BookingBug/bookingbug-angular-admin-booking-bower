@@ -536,19 +536,9 @@
   angular.module('BBAdminBooking').directive('bbAdminBooking', function(BBModel, $log, $compile, $q, PathSvc, $templateCache, $http) {
     var getTemplate, link, renderTemplate;
     getTemplate = function(template) {
-      var fromTemplateCache, partial, src;
+      var partial;
       partial = template ? template : 'main';
-      fromTemplateCache = $templateCache.get(partial);
-      if (fromTemplateCache) {
-        return fromTemplateCache;
-      } else {
-        src = PathSvc.directivePartial(partial).$$unwrapTrustedValue();
-        return $http.get(src, {
-          cache: $templateCache
-        }).then(function(response) {
-          return response.data;
-        });
-      }
+      return $templateCache.get(partial + '.html');
     };
     renderTemplate = function(scope, element, design_mode, template) {
       return $q.when(getTemplate(template)).then(function(template) {
@@ -798,19 +788,9 @@
   angular.module('BBAdminBooking').directive('bbAdminMoveBooking', function($log, $compile, $q, PathSvc, $templateCache, $http, BBModel, $rootScope) {
     var getTemplate, link, renderTemplate;
     getTemplate = function(template) {
-      var fromTemplateCache, partial, src;
+      var partial;
       partial = template ? template : 'main';
-      fromTemplateCache = $templateCache.get(partial);
-      if (fromTemplateCache) {
-        return fromTemplateCache;
-      } else {
-        src = PathSvc.directivePartial(partial).$$unwrapTrustedValue();
-        return $http.get(src, {
-          cache: $templateCache
-        }).then(function(response) {
-          return response.data;
-        });
-      }
+      return $templateCache.get(partial + '.html');
     };
     renderTemplate = function(scope, element, design_mode, template) {
       return $q.when(getTemplate(template)).then(function(template) {
@@ -1329,7 +1309,7 @@
           BACK_BTN: "@:COMMON.BTN.BACK",
           SELECT_BTN: "@:COMMON.BTN.SELECT",
           CALENDAR_PANEL_HEADING: "@:COMMON.TERMINOLOGY.CALENDAR",
-          NOT_AVAILABLE: "Time not available: {{time}}",
+          NOT_AVAILABLE: "Time not available: {{time | datetime: 'lll'}}",
           CONFLICT_EXISTS: "There\'s an availability conflict",
           CONFLICT_EXISTS_WITH_PERSON: "with {{person_name}}",
           CONFLICT_EXISTS_IN_RESOURCE: "in {{resource_name}}",
@@ -1343,7 +1323,7 @@
           DAY_5_VIEW_BTN: "5 day",
           DAY_7_VIEW_BTN: "7 day",
           FIRST_FOUND_VIEW_BTN: "First available",
-          TIME_SLOT_WITH_COUNTDOWN: "{{datetime}} (in {{time | tod_from_now}})",
+          TIME_SLOT_WITH_COUNTDOWN: "{{datetime | 'LT'}} (in {{time | tod_from_now}})",
           NOT_FOUND: "No availability found",
           NOT_FOUND_TRY_DIFFERENT_TIME_RANGE: "No availability found, try a different time-range",
           OVERBOOK_WARNING: "Overbooking ignores booking time step and availability constraints to make a booking.",
@@ -1352,14 +1332,14 @@
           OVERLAPPING_BOOKINGS: "The following bookings look like they are clashing with this requested time",
           NEARBY_BOOKINGS: "The following nearby bookings might be clashing with this requested time",
           EXTERNAL_BOOKINGS: "The following external calendar bookings look like they are clashing with this requested time",
-          EXTERNAL_BOOKING_DESCRIPTION: "{{title}} from {{from}} to {{to}}",
+          EXTERNAL_BOOKING_DESCRIPTION: "{{title}} from {{from | datetime: 'lll'}} to {{to | datetime: 'lll'}}",
           ALTERNATIVE_TIME_NO_OVERBOOKING: "It looks like the booking step that service was configured for doesn't allow that time. You can select an alternative time, or you can try booking the requested time anyway, however making double bookings is not allowed by your business configuration settings",
           ALTERNATIVE_TIME_ALLOW_OVERBOOKING: "The following external calendar bookings look like they are clashing with this requested time",
           CLOSEST_TIME_NO_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway, however double bookings aren\'t allowed by your company configuration settings",
           CLOSEST_TIME_ALLOW_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway",
-          CLOSEST_EARLIER_TIME_BTN: "Closest Earlier: {{closest_earlier}}",
-          CLOSEST_LATER_TIME_BTN: "Closest Later: {{closest_later}}",
-          REQUESTED_TIME_BTN: "Requested Time: {{requested_time}}",
+          CLOSEST_EARLIER_TIME_BTN: "Closest Earlier: {{closest_earlier | datetime: 'LT'}}",
+          CLOSEST_LATER_TIME_BTN: "Closest Later: {{closest_later | datetime: 'LT'}}",
+          REQUESTED_TIME_BTN: "Requested Time: {{requested_time: datetime: 'LT'}}",
           FIND_ANOTHER_TIME_BTN: "Find another time",
           MORNING_HEADER: "@:COMMON.TERMINOLOGY.MORNING",
           AFTERNOON_HEADER: "@:COMMON.TERMINOLOGY.AFTERNOON",
@@ -1394,6 +1374,7 @@
           BLOCK_WHOLE_DAY: "Block whole day",
           BLOCK_TIME_TAB_HEADING: "Block time",
           MAKE_BOOKING_TAB_HEADING: "Make booking",
+          FOR: "For",
           PERSON_LABEL: "@:COMMON.TERMINOLOGY.PERSON",
           PERSON_DEFAULT_OPTION: "Any Person",
           RESOURCE_LABEL: "@:COMMON.TERMINOLOGY.RESOURCE",
@@ -1406,6 +1387,7 @@
           YES_OPTION: "@:COMMON.BTN.YES",
           NO_OPTION: "@:COMMON.BTN.NO",
           NEXT_BTN: "@:COMMON.BTN.NEXT",
+          BLOCK_TIME_BTN: "Block Time",
           FIELD_REQUIRED: "@:COMMON.FORM.FIELD_REQUIRED"
         },
         BOOKINGS_TABLE: {
