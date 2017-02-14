@@ -1,8 +1,47 @@
 .bb-date-picker {
 
   [uib-timepicker] {
-    margin-top: -32px;
+    margin-top: -33px;
   }
 
+}
 
+.form-group {
+  [bb-date-time-picker]{
+    .bb-date-picker {
+      input {
+        &.form-control[readonly] {
+          background-color: #ffffff;
+          border-color: $gray;
+          &:focus {
+            border-color: $light-blue;
+            box-shadow: none;
+          }
+          &.datepicker-show-focus {
+            border-color: $light-blue;
+            box-shadow: none;
+            ~ span {
+              button {
+                margin-left: 0;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  &.has-error {
+    [bb-date-time-picker]{
+      .bb-date-picker {
+        label {
+          color: $state-danger-text;
+        }
+        input {
+          &.form-control[readonly] {
+            border-color: $state-danger-text;
+          }
+        }
+      }
+    }
+  }
 }
