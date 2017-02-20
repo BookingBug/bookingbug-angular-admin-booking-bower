@@ -20,7 +20,7 @@
     "tests"
   ],
   "dependencies": {
-    "bookingbug-angular-core": "1.3.4",
-    "bookingbug-angular-admin": "1.3.4"
+    "bookingbug-angular-core": "1.3.5",
+    "bookingbug-angular-admin": "1.3.5"
   }
 }
