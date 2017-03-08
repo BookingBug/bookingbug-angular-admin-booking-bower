@@ -233,7 +233,6 @@ var BBAdminCalendarCtrl = function BBAdminCalendarCtrl($scope, $element, $contro
 
         // reset views
         for (var key in $scope.calendar_view) {
-            var value = $scope.calendar_view[key];
             $scope.calendar_view[key] = false;
         }
 
@@ -304,7 +303,6 @@ var BBAdminCalendarConflictCtrl = function BBAdminCalendarConflictCtrl($scope, $
     var time = $scope.bb.current_item.defaults.time;
     var duration = $scope.bb.current_item.duration;
 
-    var end_time = time + $scope.bb.current_item.duration;
 
     var start_datetime = $scope.bb.current_item.defaults.datetime;
 
@@ -559,8 +557,6 @@ angular.module('BBAdminBooking').controller('adminBookingClients', function ($sc
     $scope.typeHeadResults = function ($item, $model, $label) {
 
         var item = $item;
-        var model = $model;
-        var label = $label;
         $scope.client = item;
 
         return $scope.selectClient($item);
@@ -1461,8 +1457,6 @@ angular.module('BBAdminBooking').factory('ProcessAssetsFilter', function () {
             return assets.push(parseInt(decodeURIComponent(value)));
         });
     };
-
-    return assets;
 });
 "use strict";
 
