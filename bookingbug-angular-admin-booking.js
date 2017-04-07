@@ -439,8 +439,7 @@ angular.module('BBAdminBooking').directive('bbAdminBookingClients', function () 
 
 angular.module('BBAdminBooking').controller('adminBookingClients', function ($scope, $rootScope, $q, AlertService, ValidatorService, ErrorService, $log, BBModel, $timeout, LoadingService, AdminBookingOptions, $translate) {
 
-    console.warn('Deprecation warning: validator.validateForm() will be removed from bbAdminBookingClients in an upcoming major release, please update your template to use bbForm and submitForm() instead. See https://github.com/bookingbug/bookingbug-angular/issues/638');
-    $scope.validator = ValidatorService;
+    $scope.emailPattern = ValidatorService.getEmailPattern();
 
     $scope.admin_options = AdminBookingOptions;
     $scope.clients = new BBModel.Pagination({ page_size: 10, max_size: 5, request_page_size: 10 });
