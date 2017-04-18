@@ -236,7 +236,9 @@ var BBAdminCalendarCtrl = function BBAdminCalendarCtrl($scope, $element, $contro
     };
 
     $scope.pickTime = function (slot) {
-        $scope.bb.current_item.setDate({ date: slot.datetime });
+        $scope.bb.current_item.setDate({
+            date: slot.datetime
+        });
         $scope.bb.current_item.setTime(slot);
 
         $scope.setLastSelectedDate(slot.datetime);
@@ -260,8 +262,14 @@ var BBAdminCalendarCtrl = function BBAdminCalendarCtrl($scope, $element, $contro
 
     return $scope.overBook = function () {
 
-        var new_timeslot = new BBModel.TimeSlot({ time: $scope.bb.current_item.defaults.time, avail: 1 });
-        var new_day = new BBModel.Day({ date: $scope.bb.current_item.defaults.datetime, spaces: 1 });
+        var new_timeslot = new BBModel.TimeSlot({
+            time: $scope.bb.current_item.defaults.time,
+            avail: 1
+        });
+        var new_day = new BBModel.Day({
+            date: $scope.bb.current_item.defaults.datetime,
+            spaces: 1
+        });
 
         $scope.setLastSelectedDate(new_day.date);
         $scope.bb.current_item.setDate(new_day);
@@ -292,8 +300,16 @@ angular.module('BB.Directives').directive('bbAdminCalendarConflict', function ()
     };
 });
 
-var BBAdminCalendarConflictCtrl = function BBAdminCalendarConflictCtrl($scope, $element, $controller, $attrs, BBModel) {
+var BBAdminCalendarConflictCtrl = function BBAdminCalendarConflictCtrl($scope, $element, $controller, $attrs, BBModel, bbAnalyticsPiwik, $window) {
     'ngInject';
+
+    if (bbAnalyticsPiwik.isEnabled()) setPiwik();
+
+    function setPiwik() {
+        var category = "Availability Conflict";
+        var title = "Pop Up";
+        bbAnalyticsPiwik.push(['trackEvent', [category], title]);
+    }
 
     var time = $scope.bb.current_item.defaults.time;
     var duration = $scope.bb.current_item.duration;
@@ -1523,7 +1539,7 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 MOBILE_LBL: "@:COMMON.TERMINOLOGY.MOBILE",
                 NO_RESULTS_FOUND: "No results found",
                 NUM_CUSTOMERS: "{CUSTOMERS_NUMBER, plural, =0{no customers} =1{one customer} other{{CUSTOMERS_NUMBER} customers}} found",
-                SEARCH_BY_PLACEHOLDER: "Search by email or name",
+                SEARCH_BY_PLACEHOLDER: "Search by email or name",
                 STEP_HEADING: "Select a customer",
                 SELECT_BTN: "@:COMMON.BTN.SELECT",
                 SORT_BY_LBL: "Sort by",
