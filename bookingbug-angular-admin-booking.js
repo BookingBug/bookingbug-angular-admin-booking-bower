@@ -1136,7 +1136,7 @@ angular.module('BB.Directives').directive('selectFirstSlot', function () {
                 // Only show TimeSlots in the future!
                 // -------------------------------------
                 slots = _.filter(slots, function (slot) {
-                    return slot.time_moment.isAfter(moment());
+                    return slot.datetime.isAfter(moment());
                 });
                 // --------------------------------------
                 // Select the first available TimeSlot
@@ -1144,8 +1144,8 @@ angular.module('BB.Directives').directive('selectFirstSlot', function () {
                 if (slots[0]) {
                     scope.bb.selected_slot = slots[0];
                     scope.bb.selected_date = scope.selected_date;
-                    var hours = slots[0].time_24.split(":")[0];
-                    var minutes = slots[0].time_24.split(":")[1];
+                    var hours = slots[0].datetime.hours();
+                    var minutes = slots[0].datetime.minutes();
                     scope.bb.selected_date.hour(hours).minutes(minutes).seconds(0);
                     scope.highlightSlot(slots[0], scope.selected_day);
                 }
@@ -1501,7 +1501,7 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 DAY_5_VIEW_BTN: "5 day",
                 DAY_7_VIEW_BTN: "7 day",
                 FIRST_FOUND_VIEW_BTN: "First available",
-                TIME_SLOT_WITH_COUNTDOWN: "{{datetime | 'LT'}} (in {{time | tod_from_now}})",
+                TIME_SLOT_WITH_COUNTDOWN: "{{datetime | datetime: 'LT'}} (in {{time | tod_from_now}})",
                 NOT_FOUND: "No availability found",
                 NOT_FOUND_TRY_DIFFERENT_TIME_RANGE: "No availability found, try a different time-range",
                 OVERBOOK_WARNING: "Overbooking ignores booking time step and availability constraints to make a booking.",
