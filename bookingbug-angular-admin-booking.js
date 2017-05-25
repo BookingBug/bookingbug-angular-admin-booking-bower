@@ -148,6 +148,7 @@ angular.module('BBAdminBooking').controller('BBAdminResourcesDropdownCtrl', BBAd
 'use strict';
 
 angular.module('BB.Directives').directive('bbAdminCalendar', function () {
+
     return {
         restrict: 'AE',
         replace: true,
@@ -191,6 +192,10 @@ var BBAdminCalendarCtrl = function BBAdminCalendarCtrl($scope, $element, $contro
             return $scope.resource_name = $scope.bb.current_item.resource.name;
         }
     };
+
+    $scope.$on('slotChanged', function (event, date) {
+        $scope.$emit('slotChanged:updateModalTitle', date);
+    });
 
     $scope.switchView = function (view) {
 
@@ -242,7 +247,6 @@ var BBAdminCalendarCtrl = function BBAdminCalendarCtrl($scope, $element, $contro
         $scope.bb.current_item.setTime(slot);
 
         $scope.setLastSelectedDate(slot.datetime);
-
         if ($scope.bb.current_item.reserve_ready) {
             return $scope.addItemToBasket().then(function () {
                 return $scope.decideNextPage();
@@ -443,163 +447,176 @@ var BBAdminCalendarConflictCtrl = function BBAdminCalendarConflictCtrl($scope, $
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-angular.module('BBAdminBooking').directive('bbAdminBookingClients', function () {
-    return {
-        restrict: 'AE',
-        replace: false,
-        scope: true,
-        controller: 'adminBookingClients',
-        templateUrl: 'admin_booking_clients.html'
-    };
-});
+(function () {
 
-angular.module('BBAdminBooking').controller('adminBookingClients', function ($scope, $rootScope, $q, AlertService, ValidatorService, ErrorService, $log, BBModel, $timeout, LoadingService, AdminBookingOptions, $translate) {
-
-    $scope.emailPattern = ValidatorService.getEmailPattern();
-
-    $scope.admin_options = AdminBookingOptions;
-    $scope.clients = new BBModel.Pagination({ page_size: 10, max_size: 5, request_page_size: 10 });
-    var loader = LoadingService.$loader($scope);
-
-    $scope.sort_by_options = [{ key: 'first_name', name: $translate.instant('ADMIN_BOOKING.CUSTOMER.SORT_BY_FIRST_NAME') }, { key: 'last_name', name: $translate.instant('ADMIN_BOOKING.CUSTOMER.SORT_BY_LAST_NAME') }, { key: 'email', name: $translate.instant('ADMIN_BOOKING.CUSTOMER.SORT_BY_EMAIL') }];
-
-    $scope.sort_by = $scope.sort_by_options[0].key;
-
-    $rootScope.connection_started.then(function () {
-        return $scope.clearClient();
+    angular.module('BBAdminBooking').directive('bbAdminBookingClients', function () {
+        return {
+            restrict: 'AE',
+            replace: false,
+            scope: true,
+            controller: AdminBookingClientsCtrl,
+            templateUrl: 'admin_booking_clients.html'
+        };
     });
 
-    $scope.selectClient = function (client, route) {
-        $scope.setClient(client);
-        $scope.client.setValid(true);
-        return $scope.decideNextPage(route);
-    };
+    function AdminBookingClientsCtrl($rootScope, $scope, $q, $log, $translate, $timeout, AlertService, ValidatorService, BBModel, LoadingService, AdminBookingOptions) {
+        'ngInject';
 
-    $scope.createClient = function (route) {
+        $scope.emailPattern = ValidatorService.getEmailPattern();
 
-        loader.notLoaded();
+        $scope.admin_options = AdminBookingOptions;
+        $scope.clients = new BBModel.Pagination({ page_size: 10, max_size: 5, request_page_size: 10 });
+        var loader = LoadingService.$loader($scope);
 
-        // we need to validate the client information has been correctly entered here
-        if ($scope.bb && $scope.bb.parent_client) {
-            $scope.client.parent_client_id = $scope.bb.parent_client.id;
-        }
+        $scope.sort_by_options = [{ key: 'first_name', name: $translate.instant('ADMIN_BOOKING.CUSTOMER.SORT_BY_FIRST_NAME') }, { key: 'last_name', name: $translate.instant('ADMIN_BOOKING.CUSTOMER.SORT_BY_LAST_NAME') }, { key: 'email', name: $translate.instant('ADMIN_BOOKING.CUSTOMER.SORT_BY_EMAIL') }];
 
-        if ($scope.client_details) {
-            $scope.client.setClientDetails($scope.client_details);
-        }
+        $scope.sort_by = $scope.sort_by_options[0].key;
 
-        return BBModel.Client.$create_or_update($scope.bb.company, $scope.client).then(function (client) {
-            loader.setLoaded();
-            return $scope.selectClient(client, route);
-        }, function (err) {
-
-            if (err.data && err.data.error === "Please Login") {
-                loader.setLoaded();
-                return AlertService.raise('EMAIL_IN_USE');
-            } else if (err.data && err.data.error === "Sorry, it appears that this phone number already exists") {
-                loader.setLoaded();
-                return AlertService.raise('PHONE_NUMBER_IN_USE');
-            } else {
-                return loader.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
-            }
+        $rootScope.connection_started.then(function () {
+            return $scope.clearClient();
         });
-    };
 
-    $scope.getClients = function (params, options) {
-
-        if (options == null) {
-            options = {};
-        }
-        $scope.search_triggered = true;
-
-        $timeout(function () {
-            return $scope.search_triggered = false;
-        }, 1000);
-
-        if (!params || params && !params.filter_by) {
-            return;
-        }
-
-        $scope.params = {
-            company: params.company || $scope.bb.company,
-            per_page: params.per_page || $scope.clients.request_page_size,
-            filter_by: params.filter_by,
-            search_by_fields: params.search_by_fields || 'phone,mobile',
-            order_by: params.order_by || $scope.sort_by,
-            order_by_reverse: params.order_by_reverse,
-            page: params.page || 1
+        //only select client using space or return keys
+        $scope.typeAheadSelectIf = function ($event) {
+            var result = false;
+            if ($event.keyCode === 13 || $event.keyCode === 32) {
+                result = true;
+            }
+            return result;
         };
-        if (AdminBookingOptions.use_default_company_id) {
-            $scope.params.default_company_id = $scope.bb.company.id;
-        }
 
-        $scope.notLoaded($scope);
+        $scope.selectClient = function (client, route) {
+            $scope.setClient(client);
+            $scope.client.setValid(true);
+            return $scope.decideNextPage(route);
+        };
 
-        return BBModel.Admin.Client.$query($scope.params).then(function (result) {
+        $scope.createClient = function (route) {
 
-            $scope.search_complete = true;
+            loader.notLoaded();
 
-            if (options.add) {
-                $scope.clients.add(params.page, result.items);
-            } else {
-                $scope.clients.initialise(result.items, result.total_entries);
+            // we need to validate the client information has been correctly entered here
+            if ($scope.bb && $scope.bb.parent_client) {
+                $scope.client.parent_client_id = $scope.bb.parent_client.id;
             }
 
-            return loader.setLoaded();
-        });
-    };
+            if ($scope.client_details) {
+                $scope.client.setClientDetails($scope.client_details);
+            }
 
-    $scope.searchClients = function (search_text) {
-        var defer = $q.defer();
-        var params = {
-            filter_by: search_text,
-            company: $scope.bb.company
+            return BBModel.Client.$create_or_update($scope.bb.company, $scope.client).then(function (client) {
+                loader.setLoaded();
+                return $scope.selectClient(client, route);
+            }, function (err) {
+
+                if (err.data && err.data.error === "Please Login") {
+                    loader.setLoaded();
+                    return AlertService.raise('EMAIL_IN_USE');
+                } else if (err.data && err.data.error === "Sorry, it appears that this phone number already exists") {
+                    loader.setLoaded();
+                    return AlertService.raise('PHONE_NUMBER_IN_USE');
+                } else {
+                    return loader.setLoadedAndShowError($scope, err, 'Sorry, something went wrong');
+                }
+            });
         };
-        if (AdminBookingOptions.use_default_company_id) {
-            params.default_company_id = $scope.bb.company.id;
-        }
-        BBModel.Admin.Client.$query(params).then(function (clients) {
-            return defer.resolve(clients.items);
-        });
-        return defer.promise;
-    };
 
-    $scope.typeHeadResults = function ($item, $model, $label) {
+        $scope.getClients = function (params, options) {
 
-        var item = $item;
-        $scope.client = item;
+            if (options == null) {
+                options = {};
+            }
+            $scope.search_triggered = true;
 
-        return $scope.selectClient($item);
-    };
+            $timeout(function () {
+                return $scope.search_triggered = false;
+            }, 1000);
 
-    $scope.clearSearch = function () {
-        $scope.clients.initialise();
-        $scope.typeahead_result = null;
-        return $scope.search_complete = false;
-    };
+            if (!params || params && !params.filter_by) {
+                return;
+            }
 
-    $scope.edit = function (item) {
-        return $log.info("not implemented");
-    };
+            $scope.params = {
+                company: params.company || $scope.bb.company,
+                per_page: params.per_page || $scope.clients.request_page_size,
+                filter_by: params.filter_by,
+                search_by_fields: params.search_by_fields || 'phone,mobile',
+                order_by: params.order_by || $scope.sort_by,
+                order_by_reverse: params.order_by_reverse,
+                page: params.page || 1
+            };
+            if (AdminBookingOptions.use_default_company_id) {
+                $scope.params.default_company_id = $scope.bb.company.id;
+            }
 
-    $scope.pageChanged = function () {
-        var _Array$from = Array.from($scope.clients.update()),
-            _Array$from2 = _slicedToArray(_Array$from, 2),
-            items_present = _Array$from2[0],
-            page_to_load = _Array$from2[1];
+            $scope.notLoaded($scope);
 
-        if (!items_present) {
-            $scope.params.page = page_to_load;
-            return $scope.getClients($scope.params, { add: true });
-        }
-    };
+            return BBModel.Admin.Client.$query($scope.params).then(function (result) {
 
-    return $scope.sortChanged = function (sort_by) {
-        $scope.params.order_by = sort_by;
-        $scope.params.page = 1;
-        return $scope.getClients($scope.params);
-    };
-});
+                $scope.search_complete = true;
+
+                if (options.add) {
+                    $scope.clients.add(params.page, result.items);
+                } else {
+                    $scope.clients.initialise(result.items, result.total_entries);
+                }
+
+                return loader.setLoaded();
+            });
+        };
+
+        $scope.searchClients = function (search_text) {
+            var defer = $q.defer();
+            var params = {
+                filter_by: search_text,
+                company: $scope.bb.company
+            };
+            if (AdminBookingOptions.use_default_company_id) {
+                params.default_company_id = $scope.bb.company.id;
+            }
+            BBModel.Admin.Client.$query(params).then(function (clients) {
+                return defer.resolve(clients.items);
+            });
+            return defer.promise;
+        };
+
+        $scope.typeHeadResults = function ($item, $model, $label) {
+
+            var item = $item;
+            $scope.client = item;
+
+            return $scope.selectClient($item);
+        };
+
+        $scope.clearSearch = function () {
+            $scope.clients.initialise();
+            $scope.typeahead_result = null;
+            return $scope.search_complete = false;
+        };
+
+        $scope.edit = function (item) {
+            return $log.info("not implemented");
+        };
+
+        $scope.pageChanged = function () {
+            var _Array$from = Array.from($scope.clients.update()),
+                _Array$from2 = _slicedToArray(_Array$from, 2),
+                items_present = _Array$from2[0],
+                page_to_load = _Array$from2[1];
+
+            if (!items_present) {
+                $scope.params.page = page_to_load;
+                return $scope.getClients($scope.params, { add: true });
+            }
+        };
+
+        $scope.sortChanged = function (sort_by) {
+            $scope.params.order_by = sort_by;
+            $scope.params.page = 1;
+            return $scope.getClients($scope.params);
+        };
+    }
+})();
 'use strict';
 
 angular.module('BBAdminBooking').directive('bbAdminBooking', function (BBModel, $log, $compile, $q, PathSvc, $templateCache, $http) {
@@ -1241,7 +1258,7 @@ angular.module('BB.Filters').filter('tod_from_now', function () {
 });
 'use strict';
 
-/*
+/**
  * @ngdoc service
  * @module BB.Services
  * @name AdminBookingOptions
@@ -1250,7 +1267,7 @@ angular.module('BB.Filters').filter('tod_from_now', function () {
  * Returns a set of Admin Booking configuration options
  */
 
-/*
+/**
  * @ngdoc service
  * @module BB.Services
  * @name AdminBookingOptionsProvider
@@ -1258,12 +1275,13 @@ angular.module('BB.Filters').filter('tod_from_now', function () {
  * @description
  * Provider
  *
+ *
  * @example
- <example>
- angular.module('ExampleModule').config ['AdminBookingOptionsProvider', (AdminBookingOptionsProvider) ->
- GeneralOptionsProvider.setOption('twelve_hour_format', true)
- ]
- </example>
+ <pre>
+     angular.module('ExampleModule').config ['AdminBookingOptionsProvider', (AdminBookingOptionsProvider) ->
+        GeneralOptionsProvider.setOption('twelve_hour_format', true)
+     ]
+ </pre>
  */
 angular.module('BB.Services').provider('AdminBookingOptions', function () {
     // This list of default options is meant to grow
@@ -1287,48 +1305,70 @@ angular.module('BB.Services').provider('AdminBookingOptions', function () {
 });
 'use strict';
 
-angular.module('BBAdminBooking').factory('AdminBookingPopup', function ($uibModal, $timeout, $document) {
+(function () {
 
-    return {
-        open: function open(_config) {
-            return $uibModal.open({
-                size: 'lg',
-                controller: function controller($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
-                    $scope.Math = $window.Math;
-                    if ($scope.bb && $scope.bb.current_item) {
-                        delete $scope.bb.current_item;
-                    }
-                    $scope.config = angular.extend({
-                        clear_member: true,
-                        template: 'main'
-                    }, config);
-                    if ($scope.company) {
-                        if (!$scope.config.company_id) {
-                            $scope.config.company_id = $scope.company.id;
+    angular.module('BBAdminBooking').factory('AdminBookingPopup', adminBookingPopup);
+
+    function adminBookingPopup($uibModal) {
+
+        return {
+            open: function open(_config) {
+
+                return $uibModal.open({
+                    size: 'lg',
+                    controller: AdminBookingPopupCtrl,
+                    templateUrl: 'admin_booking_popup.html',
+                    resolve: {
+                        config: function config() {
+                            return _config;
                         }
                     }
-                    $scope.config.item_defaults = angular.extend({
-                        merge_resources: AdminBookingOptions.merge_resources,
-                        merge_people: AdminBookingOptions.merge_people
-                    }, config.item_defaults);
-                    return $scope.cancel = function () {
-                        return $uibModalInstance.dismiss('cancel');
-                    };
-                },
+                });
+            }
+        };
 
-                templateUrl: 'admin_booking_popup.html',
-                resolve: {
-                    config: function config() {
-                        return _config;
-                    }
-                }
+        function AdminBookingPopupCtrl($rootScope, $scope, $uibModalInstance, config, $window, AdminBookingOptions) {
+            'ngInject';
+
+            var updateModalTitle = function updateModalTitle(event, date) {
+                return $scope.config.title = date.datetime.format('LLLL');
+            };
+            var updateModalTitleHandler = $scope.$on('slotChanged:updateModalTitle', updateModalTitle);
+            $scope.$on('$destroy', function () {
+                return updateModalTitleHandler();
             });
+
+            $scope.Math = $window.Math;
+
+            if ($scope.bb && $scope.bb.current_item) {
+                delete $scope.bb.current_item;
+            }
+
+            $scope.config = angular.extend({
+                clear_member: true,
+                template: 'main'
+            }, config);
+
+            if ($scope.company) {
+                if (!$scope.config.company_id) {
+                    $scope.config.company_id = $scope.company.id;
+                }
+            }
+
+            $scope.config.item_defaults = angular.extend({
+                merge_resources: AdminBookingOptions.merge_resources,
+                merge_people: AdminBookingOptions.merge_people
+            }, config.item_defaults);
+
+            $scope.cancel = function () {
+                return $uibModalInstance.dismiss('cancel');
+            };
         }
-    };
-});
+    }
+})();
 'use strict';
 
-/*
+/**
  * @ngdoc service
  * @name BBAdminBooking.service:BBAssets
  * @description
@@ -1487,7 +1527,7 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 BACK_BTN: "@:COMMON.BTN.BACK",
                 SELECT_BTN: "@:COMMON.BTN.SELECT",
                 CALENDAR_PANEL_HEADING: "@:COMMON.TERMINOLOGY.CALENDAR",
-                NOT_AVAILABLE: "Time not available: {{time | datetime: 'lll'}}",
+                NOT_AVAILABLE: "Time not available: {{time | datetime: 'lll':true}}",
                 CONFLICT_EXISTS: "There\'s an availability conflict",
                 CONFLICT_EXISTS_WITH_PERSON: "with {{person_name}}",
                 CONFLICT_EXISTS_IN_RESOURCE: "in {{resource_name}}",
@@ -1501,34 +1541,38 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 DAY_5_VIEW_BTN: "5 day",
                 DAY_7_VIEW_BTN: "7 day",
                 FIRST_FOUND_VIEW_BTN: "First available",
-                TIME_SLOT_WITH_COUNTDOWN: "{{datetime | datetime: 'LT'}} (in {{time | tod_from_now}})",
+                TIME_SLOT_WITH_COUNTDOWN: "{{datetime | datetime: 'LT':true}} (in {{time | tod_from_now}})",
                 NOT_FOUND: "No availability found",
                 NOT_FOUND_TRY_DIFFERENT_TIME_RANGE: "No availability found, try a different time-range",
                 OVERBOOK_WARNING: "Overbooking ignores booking time step and availability constraints to make a booking.",
                 FILTER_BY_LBL: "Filter by",
+                PREV_DAY_BTN: "Previous Day",
+                NEXT_DAY_BTN: "Next Day",
 
                 SELECT_A_TIME_FOR_BOOKING: "Select a time for the booking.",
                 OVERLAPPING_BOOKINGS: "The following bookings look like they are clashing with this requested time",
                 NEARBY_BOOKINGS: "The following nearby bookings might be clashing with this requested time",
                 EXTERNAL_BOOKINGS: "The following external calendar bookings look like they are clashing with this requested time",
 
-                EXTERNAL_BOOKING_DESCRIPTION: "{{title}} from {{from | datetime: 'lll'}} to {{to | datetime: 'lll'}}",
+                EXTERNAL_BOOKING_DESCRIPTION: "{{title}} from {{from | datetime: 'lll':true}} to {{to | datetime: 'lll':true}}",
                 ALTERNATIVE_TIME_NO_OVERBOOKING: "It looks like the booking step that service was configured for doesn't allow that time. You can select an alternative time, or you can try booking the requested time anyway, however making double bookings is not allowed by your business configuration settings",
                 ALTERNATIVE_TIME_ALLOW_OVERBOOKING: "The following external calendar bookings look like they are clashing with this requested time",
 
                 CLOSEST_TIME_NO_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway, however double bookings aren\'t allowed by your company configuration settings",
                 CLOSEST_TIME_ALLOW_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway",
 
-                CLOSEST_EARLIER_TIME_BTN: "Closest Earlier: {{closest_earlier | datetime: 'LT'}}",
-                CLOSEST_LATER_TIME_BTN: "Closest Later: {{closest_later | datetime: 'LT'}}",
-                REQUESTED_TIME_BTN: "Requested Time: {{requested_time | datetime: 'LT'}}",
+                CLOSEST_EARLIER_TIME_BTN: "Closest Earlier: {{closest_earlier | datetime: 'LT':true}}",
+                CLOSEST_LATER_TIME_BTN: "Closest Later: {{closest_later | datetime: 'LT':true}}",
+                REQUESTED_TIME_BTN: "Requested Time: {{requested_time | datetime: 'LT':true}}",
                 FIND_ANOTHER_TIME_BTN: "Find another time",
                 MORNING_HEADER: "@:COMMON.TERMINOLOGY.MORNING",
                 AFTERNOON_HEADER: "@:COMMON.TERMINOLOGY.AFTERNOON",
                 EVENING_HEADER: "@:COMMON.TERMINOLOGY.EVENING"
             },
             CUSTOMER: {
+                CUSTOMER: "Customer",
                 BACK_BTN: "@:COMMON.BTN.BACK",
+                SEARCH_BTN: 'Search for customer',
                 CLEAR_BTN: "@:COMMON.BTN.CLEAR",
                 CREATE_HEADING: "Create Customer",
                 CREATE_BTN: "Create Customer",
@@ -1574,7 +1618,10 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
             },
             BOOKINGS_TABLE: {
                 CANCEL_BTN: "@:COMMON.BTN.CANCEL",
-                DETAILS_BTN: "@:COMMON.BTN.DETAILS"
+                DETAILS_BTN: "@:COMMON.BTN.DETAILS",
+                DATE_HEADING: "Date/Time",
+                DETAILS_HEADING: "Description",
+                ACTION_HEADING: "Actions"
             },
             ADMIN_MOVE_BOOKING: {
                 CANCEL_CONFIRMATION_HEADING: "Your booking has been cancelled.",
@@ -1607,6 +1654,9 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 DATE_TIME_LBL: "@:COMMON.TERMINOLOGY.DATE_TIME",
                 TIME_LBL: "@:COMMON.TERMINOLOGY.TIME",
                 PRICE_LBL: "@:COMMON.TERMINOLOGY.PRICE",
+                CLOSE_BTN: "@:COMMON.BTN.CLOSE"
+            },
+            MODAL: {
                 CLOSE_BTN: "@:COMMON.BTN.CLOSE"
             }
         }
