@@ -80,6 +80,12 @@
       return $scope.initialise();
     });
     $scope.initialise = function() {
+      $scope.initDate();
+      if ($scope.bb.item_defaults.pick_first_time || ($scope.bb.current_item.defaults.time != null) || ($scope.bb.item_defaults.day_view && $scope.bb.item_defaults.day_view !== 'multi_day')) {
+        $scope.loadDay();
+      } else {
+        $scope.setLoaded($scope);
+      }
       if ($scope.bb.item_defaults.pick_first_time) {
         $scope.switchView('next_available');
       } else if ($scope.bb.current_item.defaults.time != null) {
@@ -97,6 +103,7 @@
     $scope.switchView = function(view) {
       var i, key, len, ref, ref1, slot, value;
       if (view === "day") {
+        $scope.loadDay();
         if ($scope.slots && $scope.bb.current_item.time) {
           ref = $scope.slots;
           for (i = 0, len = ref.length; i < len; i++) {
