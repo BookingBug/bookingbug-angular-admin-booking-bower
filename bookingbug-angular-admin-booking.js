@@ -997,7 +997,7 @@ angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', function ($uib
                         merge_resources: AdminBookingOptions.merge_resources,
                         merge_people: AdminBookingOptions.merge_people
                     }, config.item_defaults);
-                    return $scope.cancel = function () {
+                    $scope.cancel = function () {
                         return $uibModalInstance.dismiss('cancel');
                     };
                 },
