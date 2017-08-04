@@ -1,6 +1,7 @@
-@import "admin_calendar";
-@import "client_admin";
-@import "date_picker";
+@import 'admin_calendar';
+@import 'client_admin';
+@import 'date_picker';
+@import 'block_time';
 
 //Module overwrite
 [bb-admin-booking], &[bb-admin-booking] {
