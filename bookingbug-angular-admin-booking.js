@@ -147,6 +147,189 @@ var BBAdminResourcesDropdownCtrl = function BBAdminResourcesDropdownCtrl(BBAsset
 angular.module('BBAdminBooking').controller('BBAdminResourcesDropdownCtrl', BBAdminResourcesDropdownCtrl);
 'use strict';
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+(function () {
+    var BlockTimeCtrl = function () {
+        function BlockTimeCtrl($rootScope, BBModel, ReasonService, BlockTimeOptions, GeneralOptions) {
+            _classCallCheck(this, BlockTimeCtrl);
+
+            this.$rootScope = $rootScope;
+            this.BBModel = BBModel;
+            this.ReasonService = ReasonService;
+            this.BlockTimeOptions = BlockTimeOptions;
+            this.GeneralOptions = GeneralOptions;
+        }
+
+        BlockTimeCtrl.prototype.$onInit = function $onInit() {
+            var _this = this;
+
+            this.setDefaults();
+            this.ReasonService.query(this.$rootScope.bb.company).then(function (reasons) {
+                return _this.getReasonsCallBack(reasons);
+            }).catch(function (error) {
+                return console.warn(error);
+            });
+        };
+
+        BlockTimeCtrl.prototype.setDefaults = function setDefaults() {
+            this.blockReasons = [];
+            this.reasonObj = {};
+            this.showReasons = this.BlockTimeOptions.showReasons;
+            this.model.allDay = this.model.allDay ? this.model.allDay : false;
+            this.model.to_datetime = this.convertToMoment(this.model.to_datetime);
+            this.model.from_datetime = this.convertToMoment(this.model.from_datetime);
+            this.model.min_date = this.convertToMoment(this.model.min_date);
+            this.model.max_date = this.convertToMoment(this.model.max_date);
+            this.model.isValidDuration = this.isValidDuration;
+        };
+
+        BlockTimeCtrl.prototype.convertToMoment = function convertToMoment(date) {
+            if (date && !moment.isMoment(date)) date = moment(date);
+            return date;
+        };
+
+        BlockTimeCtrl.prototype.blockTimeSubmit = function blockTimeSubmit() {
+            var _this2 = this;
+
+            this.loading = true;
+
+            var params = {
+                start_time: this.model.from_datetime,
+                end_time: this.model.to_datetime,
+                booking: true,
+                allday: false,
+                private_note: this.model.private_note
+            };
+
+            if (this.model.allDay) {
+                // When a booking is saved as allDay, the API behaves unpredictably.
+                // We can avoid this by just setting allDay bookings manually,
+                // by setting the start and end time to be 00:00 to 24:00
+                params.start_time = params.start_time.clone().hours(0).minutes(0);
+                params.end_time = params.end_time.clone().hours(24).minutes(0);
+            }
+
+            if (_typeof(this.model.current_item.person) === 'object') {
+                return this.BBModel.Admin.Person.$block(this.model.company, this.model.current_item.person, params).then(function (response) {
+                    return _this2.blockSuccess(response);
+                }).catch(function (error) {
+                    return console.warn(error);
+                });
+            }
+
+            if (_typeof(this.model.current_item.resource) === 'object') {
+                return this.BBModel.Admin.Resource.$block(this.model.company, this.model.current_item.resource, params).then(function (response) {
+                    return _this2.blockSuccess(response);
+                }).catch(function (error) {
+                    return console.warn(error);
+                });
+            }
+        };
+
+        BlockTimeCtrl.prototype.isValidForm = function isValidForm() {
+            if (_typeof(this.model.current_item.person) !== 'object' && _typeof(this.model.current_item.resource) !== 'object') {
+                return false;
+            }
+
+            if (!this.model.from_datetime || !this.model.to_datetime) {
+                return false;
+            }
+
+            return true;
+        };
+
+        BlockTimeCtrl.prototype.blockSuccess = function blockSuccess() {
+            this.$rootScope.$broadcast('refetchBookings', 'closeModal');
+            this.loading = false;
+        };
+
+        BlockTimeCtrl.prototype.onAllDayChanged = function onAllDayChanged(isWholeDay) {
+            if (isWholeDay) {
+                this.model.duration = 1440;
+                // Not sure about this. Shouldn't need to set _start and _end
+                // but when these are omitted, the application throws when a
+                // block time all day booking is made
+                this.model._start = moment(this.model.start).hours(0).minutes(0);
+                this.model._end = moment(this.model.end).hours(24).minutes(0);
+            }
+
+            if (!isWholeDay) {
+                var calendarSlotDuration = this.GeneralOptions.calendar_slot_duration;
+                var maxDate = this.model.max_date.clone();
+                // Break references so that dateTimePicker gets new values
+                this.model.from_datetime = null;
+                this.model.to_datetime = null;
+                this.model.max_date = null;
+                this.model.from_datetime = this.model.min_date.clone();
+                this.model.to_datetime = this.model.min_date.clone().add(calendarSlotDuration, 'minutes');
+                this.model.max_date = maxDate.clone().date(this.model.min_date.date());
+            }
+        };
+
+        BlockTimeCtrl.prototype.getReasonsCallBack = function getReasonsCallBack(reasons) {
+            var otherReason = { id: reasons.length + 1, text: '', label: 'Other' };
+            this.blockReasons = this.addLabelToReasons(reasons);
+            this.blockReasons.push(otherReason);
+            if (this.editBlockTime) this.setReasonObj(otherReason);
+        };
+
+        BlockTimeCtrl.prototype.addLabelToReasons = function addLabelToReasons(reasons) {
+            return reasons.map(function (reason) {
+                reason.label = reason.text;
+                return reason;
+            });
+        };
+
+        BlockTimeCtrl.prototype.setReasonObj = function setReasonObj(otherReason) {
+            var _this3 = this;
+
+            var findReasonByText = function findReasonByText(text) {
+                return _this3.blockReasons.find(function (item) {
+                    return item.text === text;
+                });
+            };
+            var reason = findReasonByText(this.model.private_note);
+
+            if (reason && reason.text !== '') {
+                this.reasonObj = reason;
+                return;
+            }
+
+            if (this.model.private_note) {
+                otherReason.text = this.model.private_note;
+                this.reasonObj = findReasonByText(otherReason.text);
+                return;
+            }
+        };
+
+        BlockTimeCtrl.prototype.onReasonChanged = function onReasonChanged(reason) {
+            this.model.private_note = reason ? reason.text : '';
+        };
+
+        BlockTimeCtrl.prototype.isValidDuration = function isValidDuration(model) {
+            return Math.abs(model.to_datetime.diff(model.from_datetime, 'minutes')) !== 0;
+        };
+
+        return BlockTimeCtrl;
+    }();
+
+    var bbBlockTime = {
+        bindings: {
+            'model': '<',
+            'editBlockTime': '<'
+        },
+        controller: BlockTimeCtrl,
+        controllerAs: '$bbBlockTime',
+        templateUrl: 'admin-booking/bb_block_time.html'
+    };
+
+    angular.module('BBAdminBooking').component('bbBlockTime', bbBlockTime);
+})();
+'use strict';
+
 angular.module('BB.Directives').directive('bbAdminCalendar', function () {
 
     return {
@@ -1028,121 +1211,123 @@ angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', function ($uib
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var BBBlockTimeCtrl = function BBBlockTimeCtrl($scope, $element, $attrs, BBModel, BookingCollections, $rootScope, BBAssets) {
-    'ngInject';
+angular.module('BBAdminBooking').directive('bbBlockTime', bbBlockTime);
 
-    // All options (resources, people) go to the same select
-
-    $scope.resources = [];
-    $scope.resourceError = false;
-
-    BBAssets.getAssets($scope.bb.company).then(function (assets) {
-        return $scope.resources = assets;
-    });
-
-    if (!moment.isMoment($scope.bb.to_datetime)) {
-        $scope.bb.to_datetime = moment($scope.bb.to_datetime);
-    }
-
-    if (!moment.isMoment($scope.bb.from_datetime)) {
-        $scope.bb.from_datetime = moment($scope.bb.from_datetime);
-    }
-
-    if (!moment.isMoment($scope.bb.to_datetime)) {
-        $scope.bb.to_datetime = moment($scope.bb.to_datetime);
-    }
-
-    if ($scope.bb.min_date && !moment.isMoment($scope.bb.min_date)) {
-        $scope.bb.min_date = moment($scope.bb.min_date);
-    }
-
-    if ($scope.bb.max_date && !moment.isMoment($scope.bb.max_date)) {
-        $scope.bb.max_date = moment($scope.bb.max_date);
-    }
-
-    $scope.all_day = false;
-
-    $scope.hideBlockAllDay = Math.abs($scope.bb.from_datetime.diff($scope.bb.to_datetime, 'days')) > 0;
-
-    if ($scope.bb.company_settings && $scope.bb.company_settings.$has('block_questions')) {
-        $scope.bb.company_settings.$get("block_questions", {}).then(function (details) {
-            return $scope.block_questions = new BBModel.ItemDetails(details);
-        });
-    }
-
-    $scope.blockTime = function (form) {
-        if (form == null) {
-            console.error('blockTime requires form as first argument');
-            return false;
-        }
-
-        form.$setSubmitted();
-
-        if (form.$invalid || !isValid()) {
-            return false;
-        }
-
-        $scope.loading = true;
-
-        var params = {
-            start_time: $scope.bb.from_datetime,
-            end_time: $scope.bb.to_datetime,
-            booking: true,
-            allday: $scope.all_day
-        };
-
-        if ($scope.block_questions) {
-            params.questions = $scope.block_questions.getPostData();
-        }
-
-        if (_typeof($scope.bb.current_item.person) === 'object') {
-            // Block call
-            return BBModel.Admin.Person.$block($scope.bb.company, $scope.bb.current_item.person, params).then(function (response) {
-                return blockSuccess(response);
-            });
-        } else if (_typeof($scope.bb.current_item.resource) === 'object') {
-            // Block call
-            return BBModel.Admin.Resource.$block($scope.bb.company, $scope.bb.current_item.resource, params).then(function (response) {
-                return blockSuccess(response);
-            });
-        }
-    };
-
-    var isValid = function isValid() {
-        $scope.resourceError = false;
-        if (_typeof($scope.bb.current_item.person) !== 'object' && _typeof($scope.bb.current_item.resource) !== 'object') {
-            $scope.resourceError = true;
-        }
-
-        if (_typeof($scope.bb.current_item.person) !== 'object' && _typeof($scope.bb.current_item.resource) !== 'object' || $scope.bb.from_datetime == null || !$scope.bb.to_datetime) {
-            return false;
-        }
-
-        return true;
-    };
-
-    var blockSuccess = function blockSuccess(response) {
-        $rootScope.$broadcast('refetchBookings');
-        $scope.loading = false;
-        // Close modal window
-        return $scope.cancel();
-    };
-
-    $scope.changeBlockDay = function (blockDay) {
-        return $scope.all_day = blockDay;
-    };
-    //   if blockDay
-    //     $scope.bb.from_datetime = $scope.bb.min_date.format()
-    //     $scope.bb.to_datetime = $scope.bb.max_date.format()
-};
-
-angular.module('BBAdminBooking').directive('bbBlockTime', function () {
+function bbBlockTime() {
     return {
         scope: true,
         restrict: 'A',
         controller: BBBlockTimeCtrl
     };
-});
+
+    function BBBlockTimeCtrl($scope, $element, $attrs, BBModel, $rootScope, BBAssets) {
+        'ngInject';
+
+        // All options (resources, people) go to the same select
+
+        $scope.resources = [];
+        $scope.resourceError = false;
+
+        BBAssets.getAssets($scope.bb.company).then(function (assets) {
+            return $scope.resources = assets;
+        });
+
+        if (!moment.isMoment($scope.bb.to_datetime)) {
+            $scope.bb.to_datetime = moment($scope.bb.to_datetime);
+        }
+
+        if (!moment.isMoment($scope.bb.from_datetime)) {
+            $scope.bb.from_datetime = moment($scope.bb.from_datetime);
+        }
+
+        if (!moment.isMoment($scope.bb.to_datetime)) {
+            $scope.bb.to_datetime = moment($scope.bb.to_datetime);
+        }
+
+        if ($scope.bb.min_date && !moment.isMoment($scope.bb.min_date)) {
+            $scope.bb.min_date = moment($scope.bb.min_date);
+        }
+
+        if ($scope.bb.max_date && !moment.isMoment($scope.bb.max_date)) {
+            $scope.bb.max_date = moment($scope.bb.max_date);
+        }
+
+        $scope.all_day = false;
+
+        $scope.hideBlockAllDay = Math.abs($scope.bb.from_datetime.diff($scope.bb.to_datetime, 'days')) > 0;
+
+        if ($scope.bb.company_settings && $scope.bb.company_settings.$has('block_questions')) {
+            $scope.bb.company_settings.$get("block_questions", {}).then(function (details) {
+                return $scope.block_questions = new BBModel.ItemDetails(details);
+            });
+        }
+
+        $scope.blockTime = function (form) {
+            if (form == null) {
+                console.error('blockTime requires form as first argument');
+                return false;
+            }
+
+            form.$setSubmitted();
+
+            if (form.$invalid || !isValid()) {
+                return false;
+            }
+
+            $scope.loading = true;
+
+            var params = {
+                start_time: $scope.bb.from_datetime,
+                end_time: $scope.bb.to_datetime,
+                booking: true,
+                allday: $scope.all_day
+            };
+
+            if ($scope.block_questions) {
+                params.questions = $scope.block_questions.getPostData();
+            }
+
+            if (_typeof($scope.bb.current_item.person) === 'object') {
+                // Block call
+                return BBModel.Admin.Person.$block($scope.bb.company, $scope.bb.current_item.person, params).then(function (response) {
+                    return blockSuccess(response);
+                });
+            } else if (_typeof($scope.bb.current_item.resource) === 'object') {
+                // Block call
+                return BBModel.Admin.Resource.$block($scope.bb.company, $scope.bb.current_item.resource, params).then(function (response) {
+                    return blockSuccess(response);
+                });
+            }
+        };
+
+        var isValid = function isValid() {
+            $scope.resourceError = false;
+            if (_typeof($scope.bb.current_item.person) !== 'object' && _typeof($scope.bb.current_item.resource) !== 'object') {
+                $scope.resourceError = true;
+            }
+
+            if (_typeof($scope.bb.current_item.person) !== 'object' && _typeof($scope.bb.current_item.resource) !== 'object' || $scope.bb.from_datetime == null || !$scope.bb.to_datetime) {
+                return false;
+            }
+
+            return true;
+        };
+
+        var blockSuccess = function blockSuccess(response) {
+            $rootScope.$broadcast('refetchBookings');
+            $scope.loading = false;
+            // Close modal window
+            return $scope.cancel();
+        };
+
+        $scope.changeBlockDay = function (blockDay) {
+            return $scope.all_day = blockDay;
+        };
+        //   if blockDay
+        //     $scope.bb.from_datetime = $scope.bb.min_date.format()
+        //     $scope.bb.to_datetime = $scope.bb.max_date.format()
+    }
+}
 'use strict';
 
 angular.module('BB.Directives').directive('selectFirstSlot', function () {
@@ -1256,164 +1441,6 @@ angular.module('BB.Filters').filter('tod_from_now', function () {
         return str;
     };
 });
-"use strict";
-
-angular.module("BBAdminBooking").config(function ($translateProvider) {
-    "ngInject";
-
-    var translations = {
-        ADMIN_BOOKING: {
-            ASSETS: {
-                RESOURCES_GROUP_LABEL: "@:COMMON.TERMINOLOGY.RESOURCES",
-                STAFF_GROUP_LABEL: "@:COMMON.TERMINOLOGY.STAFF"
-            },
-            CALENDAR: {
-                STEP_HEADING: "Select a time",
-                TIME_NOT_AVAILABLE_STEP_HEADING: "Time not available",
-                ANY_PERSON_OPTION: "Any person",
-                ANY_RESOURCE_OPTION: "Any resource",
-                BACK_BTN: "@:COMMON.BTN.BACK",
-                SELECT_BTN: "@:COMMON.BTN.SELECT",
-                CALENDAR_PANEL_HEADING: "@:COMMON.TERMINOLOGY.CALENDAR",
-                NOT_AVAILABLE: "Time not available: {{time | datetime: 'lll':true}}",
-                CONFLICT_EXISTS: "There\'s an availability conflict",
-                CONFLICT_EXISTS_WITH_PERSON: "with {{person_name}}",
-                CONFLICT_EXISTS_IN_RESOURCE: "in {{resource_name}}",
-                CONFLICT_RESULT_OF: "This can be the result of:",
-                CONFLICT_REASON_ALREADY_BOOKED: "The Staff/Resource being booked or blocked already",
-                CONFLICT_REASON_NOT_ENOUGH_TIME: "Not enough available time to complete the booking before an existing one starts",
-                CONFLICT_REASON_OUTSIDE: "The selected time being outside of the {{booking_time_step | time_period}} booking time step for {{service_name}}.",
-                CONFLICT_ANOTHER_TIME_OR_OVERBOOK: "You can either use the calendar to choose another time or overbook.",
-                DAY_VIEW_BTN: "Day",
-                DAY_3_VIEW_BTN: "3 day",
-                DAY_5_VIEW_BTN: "5 day",
-                DAY_7_VIEW_BTN: "7 day",
-                FIRST_FOUND_VIEW_BTN: "First available",
-                TIME_SLOT_WITH_COUNTDOWN: "{{datetime | datetime: 'LT':true}} (in {{time | tod_from_now}})",
-                NOT_FOUND: "No availability found",
-                NOT_FOUND_TRY_DIFFERENT_TIME_RANGE: "No availability found, try a different time-range",
-                OVERBOOK_WARNING: "Overbooking ignores booking time step and availability constraints to make a booking.",
-                FILTER_BY_LBL: "Filter by",
-                PREV_DAY_BTN: "Previous Day",
-                NEXT_DAY_BTN: "Next Day",
-
-                SELECT_A_TIME_FOR_BOOKING: "Select a time for the booking.",
-                OVERLAPPING_BOOKINGS: "The following bookings look like they are clashing with this requested time",
-                NEARBY_BOOKINGS: "The following nearby bookings might be clashing with this requested time",
-                EXTERNAL_BOOKINGS: "The following external calendar bookings look like they are clashing with this requested time",
-
-                EXTERNAL_BOOKING_DESCRIPTION: "{{title}} from {{from | datetime: 'lll':true}} to {{to | datetime: 'lll':true}}",
-                ALTERNATIVE_TIME_NO_OVERBOOKING: "It looks like the booking step that service was configured for doesn't allow that time. You can select an alternative time, or you can try booking the requested time anyway, however making double bookings is not allowed by your business configuration settings",
-                ALTERNATIVE_TIME_ALLOW_OVERBOOKING: "The following external calendar bookings look like they are clashing with this requested time",
-
-                CLOSEST_TIME_NO_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway, however double bookings aren\'t allowed by your company configuration settings",
-                CLOSEST_TIME_ALLOW_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway",
-
-                CLOSEST_EARLIER_TIME_BTN: "Closest Earlier: {{closest_earlier | datetime: 'LT':true}}",
-                CLOSEST_LATER_TIME_BTN: "Closest Later: {{closest_later | datetime: 'LT':true}}",
-                REQUESTED_TIME_BTN: "Requested Time: {{requested_time | datetime: 'LT':true}}",
-                FIND_ANOTHER_TIME_BTN: "Find another time",
-                MORNING_HEADER: "@:COMMON.TERMINOLOGY.MORNING",
-                AFTERNOON_HEADER: "@:COMMON.TERMINOLOGY.AFTERNOON",
-                EVENING_HEADER: "@:COMMON.TERMINOLOGY.EVENING"
-            },
-            CUSTOMER: {
-                CUSTOMER: "Customer",
-                BACK_BTN: "@:COMMON.BTN.BACK",
-                SEARCH_BTN: 'Search for customer',
-                CLEAR_BTN: "@:COMMON.BTN.CLEAR",
-                CREATE_HEADING: "Create Customer",
-                CREATE_BTN: "Create Customer",
-                CREATE_ONE_INSTEAD_BTN: "Create one instead",
-                EMAIL_LBL: "@:COMMON.TERMINOLOGY.EMAIL",
-                FIRST_NAME_LBL: "@:COMMON.TERMINOLOGY.FIRST_NAME",
-                LAST_NAME_LBL: "@:COMMON.TERMINOLOGY.LAST_NAME",
-                MOBILE_LBL: "@:COMMON.TERMINOLOGY.MOBILE",
-                NO_RESULTS_FOUND: "No results found",
-                NUM_CUSTOMERS: "{CUSTOMERS_NUMBER, plural, =0{no customers} =1{one customer} other{{CUSTOMERS_NUMBER} customers}} found",
-                SEARCH_BY_PLACEHOLDER: "Search by email or name",
-                STEP_HEADING: "Select a customer",
-                SELECT_BTN: "@:COMMON.BTN.SELECT",
-                SORT_BY_LBL: "Sort by",
-                SORT_BY_EMAIL: "@:COMMON.TERMINOLOGY.EMAIL",
-                SORT_BY_FIRST_NAME: "@:COMMON.TERMINOLOGY.FIRST_NAME",
-                SORT_BY_LAST_NAME: "@:COMMON.TERMINOLOGY.LAST_NAME",
-                ADDRESS1_LBL: "@:COMMON.TERMINOLOGY.ADDRESS1",
-                ADDRESS1_VALIDATION_MSG: "Please enter an address",
-                ADDRESS3_LBL: "@:COMMON.TERMINOLOGY.ADDRESS3",
-                ADDRESS4_LBL: "@:COMMON.TERMINOLOGY.ADDRESS4",
-                POSTCODE_LBL: "@:COMMON.TERMINOLOGY.POSTCODE"
-            },
-            QUICK_PICK: {
-                BLOCK_STAFF_OR_RESOURCE: "Block time for person/resource",
-                BLOCK_TIME_TAB_HEADING: "Block time",
-                BLOCK_WHOLE_DAY: "Block whole day",
-                MAKE_BOOKING_TAB_HEADING: "Make booking",
-                FOR: "For",
-                PERSON_LABEL: "@:COMMON.TERMINOLOGY.PERSON",
-                PERSON_DEFAULT_OPTION: "Any Person",
-                RESOURCE_LABEL: "@:COMMON.TERMINOLOGY.RESOURCE",
-                RESOURCE_DEFAULT_OPTION: "Any Resource",
-                FROM_LBL: "From",
-                SERVICE_LABEL: 'Select a service',
-                SERVICE_DEFAULT_OPTION: "-- select --",
-                SERVICE_REQUIRED_MSG: 'Please select a service',
-                STAFF_RESOURCE_REQUIRED_MSG: "Please select a person/resource",
-                TO_LBL: "To",
-                YES_OPTION: "@:COMMON.BTN.YES",
-                NO_OPTION: "@:COMMON.BTN.NO",
-                NEXT_BTN: "@:COMMON.BTN.NEXT",
-                BLOCK_TIME_BTN: "Block Time",
-                FIELD_REQUIRED: "@:COMMON.FORM.FIELD_REQUIRED"
-            },
-            BOOKINGS_TABLE: {
-                CANCEL_BTN: "@:COMMON.BTN.CANCEL",
-                DETAILS_BTN: "@:COMMON.BTN.DETAILS",
-                DATE_HEADING: "Date/Time",
-                DETAILS_HEADING: "Description",
-                ACTION_HEADING: "Actions"
-            },
-            ADMIN_MOVE_BOOKING: {
-                CANCEL_CONFIRMATION_HEADING: "Your booking has been cancelled.",
-                HEADING: "Your {{service_name}} booking",
-                CUSTOMER_NAME_LBL: "@:COMMON.TERMINOLOGY.NAME",
-                PRINT_BTN: "@:COMMON.TERMINOLOGY.PRINT",
-                EMAIL_LBL: "@:COMMON.TERMINOLOGY.EMAIL",
-                SERVICE_LBL: "@:COMMON.TERMINOLOGY.SERVICE",
-                WHEN_LBL: "@:COMMON.TERMINOLOGY.WHEN",
-                PRICE_LBL: "@:COMMON.TERMINOLOGY.PRICE",
-                CANCEL_BOOKING_BTN: "@:COMMON.BTN.CANCEL_BOOKING",
-                MOVE_BOOKING_BTN: "Move booking",
-                BOOK_WAITLIST_ITEMS_BTN: "Book Waitlist Items"
-            },
-            CHECK_ITEMS: {
-                BOOKINGS_QUESTIONS_HEADING: "Booking Questions",
-                PRIVATE_BOOKING_NOTES_HEADING: "Private Notes",
-                BOOK_BTN: "@:COMMON.BTN.BOOK",
-                BACK_BTN: "@:COMMON.BTN.BACK"
-            },
-            CONFIRMATION: {
-                TITLE: "@:COMMON.TERMINOLOGY.CONFIRMATION",
-                BOOKING_CONFIRMATION: "Booking is now confirmed.",
-                EMAIL_CONFIRMATION: "An email has been sent to {{customer_name}} with the details below.",
-                WAITLIST_CONFIRMATION: "You have successfully made the following bookings.",
-                PRINT_BTN: "@:COMMON.TERMINOLOGY.PRINT",
-                PURCHASE_REF_LBL: "Reference",
-                CUSTOMER_LBL: "@:COMMON.TERMINOLOGY.BOOKING_REF",
-                SERVICE_LBL: "@:COMMON.TERMINOLOGY.SERVICE",
-                DATE_TIME_LBL: "@:COMMON.TERMINOLOGY.DATE_TIME",
-                TIME_LBL: "@:COMMON.TERMINOLOGY.TIME",
-                PRICE_LBL: "@:COMMON.TERMINOLOGY.PRICE",
-                CLOSE_BTN: "@:COMMON.BTN.CLOSE"
-            },
-            MODAL: {
-                CLOSE_BTN: "@:COMMON.BTN.CLOSE"
-            }
-        }
-    };
-
-    $translateProvider.translations("en", translations);
-});
 'use strict';
 
 /**
@@ -1485,16 +1512,20 @@ angular.module('BB.Services').provider('AdminBookingOptions', function () {
             }
         };
 
-        function AdminBookingPopupCtrl($rootScope, $scope, $uibModalInstance, config, $window, AdminBookingOptions) {
+        function AdminBookingPopupCtrl($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
             'ngInject';
 
             var updateModalTitle = function updateModalTitle(event, date) {
                 return $scope.config.title = date.datetime.format('LLLL');
             };
-            var updateModalTitleHandler = $scope.$on('slotChanged:updateModalTitle', updateModalTitle);
-            $scope.$on('$destroy', function () {
-                return updateModalTitleHandler();
-            });
+            var closeModal = function closeModal(event, data) {
+                if (data === 'closeModal') {
+                    $scope.cancel();
+                }
+            };
+
+            $scope.$on('slotChanged:updateModalTitle', updateModalTitle);
+            $scope.$on('refetchBookings', closeModal);
 
             $scope.Math = $window.Math;
 
@@ -1519,7 +1550,7 @@ angular.module('BB.Services').provider('AdminBookingOptions', function () {
             }, config.item_defaults);
 
             $scope.cancel = function () {
-                return $uibModalInstance.dismiss('cancel');
+                $uibModalInstance.dismiss('cancel');
             };
         }
     }
@@ -1665,4 +1696,165 @@ angular.module('BBAdminBooking').factory('ProcessAssetsFilter', function () {
             return assets.push(parseInt(decodeURIComponent(value)));
         });
     };
+});
+"use strict";
+
+angular.module("BBAdminBooking").config(function ($translateProvider) {
+    "ngInject";
+
+    var translations = {
+        ADMIN_BOOKING: {
+            ASSETS: {
+                RESOURCES_GROUP_LABEL: "@:COMMON.TERMINOLOGY.RESOURCES",
+                STAFF_GROUP_LABEL: "@:COMMON.TERMINOLOGY.STAFF"
+            },
+            CALENDAR: {
+                STEP_HEADING: "Select a time",
+                TIME_NOT_AVAILABLE_STEP_HEADING: "Time not available",
+                ANY_PERSON_OPTION: "Any person",
+                ANY_RESOURCE_OPTION: "Any resource",
+                BACK_BTN: "@:COMMON.BTN.BACK",
+                SELECT_BTN: "@:COMMON.BTN.SELECT",
+                CALENDAR_PANEL_HEADING: "@:COMMON.TERMINOLOGY.CALENDAR",
+                NOT_AVAILABLE: "Time not available: {{time | datetime: 'lll':true}}",
+                CONFLICT_EXISTS: "There\'s an availability conflict",
+                CONFLICT_EXISTS_WITH_PERSON: "with {{person_name}}",
+                CONFLICT_EXISTS_IN_RESOURCE: "in {{resource_name}}",
+                CONFLICT_RESULT_OF: "This can be the result of:",
+                CONFLICT_REASON_ALREADY_BOOKED: "The Staff/Resource being booked or blocked already",
+                CONFLICT_REASON_NOT_ENOUGH_TIME: "Not enough available time to complete the booking before an existing one starts",
+                CONFLICT_REASON_OUTSIDE: "The selected time being outside of the {{booking_time_step | time_period}} booking time step for {{service_name}}.",
+                CONFLICT_ANOTHER_TIME_OR_OVERBOOK: "You can either use the calendar to choose another time or overbook.",
+                DAY_VIEW_BTN: "Day",
+                DAY_3_VIEW_BTN: "3 day",
+                DAY_5_VIEW_BTN: "5 day",
+                DAY_7_VIEW_BTN: "7 day",
+                FIRST_FOUND_VIEW_BTN: "First available",
+                TIME_SLOT_WITH_COUNTDOWN: "{{datetime | datetime: 'LT':true}} (in {{time | tod_from_now}})",
+                NOT_FOUND: "No availability found",
+                NOT_FOUND_TRY_DIFFERENT_TIME_RANGE: "No availability found, try a different time-range",
+                OVERBOOK_WARNING: "Overbooking ignores booking time step and availability constraints to make a booking.",
+                FILTER_BY_LBL: "Filter by",
+                PREV_DAY_BTN: "Previous Day",
+                NEXT_DAY_BTN: "Next Day",
+
+                SELECT_A_TIME_FOR_BOOKING: "Select a time for the booking.",
+                OVERLAPPING_BOOKINGS: "The following bookings look like they are clashing with this requested time",
+                NEARBY_BOOKINGS: "The following nearby bookings might be clashing with this requested time",
+                EXTERNAL_BOOKINGS: "The following external calendar bookings look like they are clashing with this requested time",
+
+                EXTERNAL_BOOKING_DESCRIPTION: "{{title}} from {{from | datetime: 'lll':true}} to {{to | datetime: 'lll':true}}",
+                ALTERNATIVE_TIME_NO_OVERBOOKING: "It looks like the booking step that service was configured for doesn't allow that time. You can select an alternative time, or you can try booking the requested time anyway, however making double bookings is not allowed by your business configuration settings",
+                ALTERNATIVE_TIME_ALLOW_OVERBOOKING: "The following external calendar bookings look like they are clashing with this requested time",
+
+                CLOSEST_TIME_NO_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway, however double bookings aren\'t allowed by your company configuration settings",
+                CLOSEST_TIME_ALLOW_OVERBOOKING: "Looks like that time wasn\'t available. This could just be because it would be outside of their normal schedule. This was the closest time I found. You can select an alternative time, or you can try booking the requested time anyway",
+
+                CLOSEST_EARLIER_TIME_BTN: "Closest Earlier: {{closest_earlier | datetime: 'LT':true}}",
+                CLOSEST_LATER_TIME_BTN: "Closest Later: {{closest_later | datetime: 'LT':true}}",
+                REQUESTED_TIME_BTN: "Requested Time: {{requested_time | datetime: 'LT':true}}",
+                FIND_ANOTHER_TIME_BTN: "Find another time",
+                MORNING_HEADER: "@:COMMON.TERMINOLOGY.MORNING",
+                AFTERNOON_HEADER: "@:COMMON.TERMINOLOGY.AFTERNOON",
+                EVENING_HEADER: "@:COMMON.TERMINOLOGY.EVENING"
+            },
+            CUSTOMER: {
+                CUSTOMER: "Customer",
+                BACK_BTN: "@:COMMON.BTN.BACK",
+                SEARCH_BTN: 'Search for customer',
+                CLEAR_BTN: "@:COMMON.BTN.CLEAR",
+                CREATE_HEADING: "Create Customer",
+                CREATE_BTN: "Create Customer",
+                CREATE_ONE_INSTEAD_BTN: "Create one instead",
+                EMAIL_LBL: "@:COMMON.TERMINOLOGY.EMAIL",
+                FIRST_NAME_LBL: "@:COMMON.TERMINOLOGY.FIRST_NAME",
+                LAST_NAME_LBL: "@:COMMON.TERMINOLOGY.LAST_NAME",
+                MOBILE_LBL: "@:COMMON.TERMINOLOGY.MOBILE",
+                NO_RESULTS_FOUND: "No results found",
+                NUM_CUSTOMERS: "{CUSTOMERS_NUMBER, plural, =0{no customers} =1{one customer} other{{CUSTOMERS_NUMBER} customers}} found",
+                SEARCH_BY_PLACEHOLDER: "Search by email or name",
+                STEP_HEADING: "Select a customer",
+                SELECT_BTN: "@:COMMON.BTN.SELECT",
+                SORT_BY_LBL: "Sort by",
+                SORT_BY_EMAIL: "@:COMMON.TERMINOLOGY.EMAIL",
+                SORT_BY_FIRST_NAME: "@:COMMON.TERMINOLOGY.FIRST_NAME",
+                SORT_BY_LAST_NAME: "@:COMMON.TERMINOLOGY.LAST_NAME",
+                ADDRESS1_LBL: "@:COMMON.TERMINOLOGY.ADDRESS1",
+                ADDRESS1_VALIDATION_MSG: "Please enter an address",
+                ADDRESS3_LBL: "@:COMMON.TERMINOLOGY.ADDRESS3",
+                ADDRESS4_LBL: "@:COMMON.TERMINOLOGY.ADDRESS4",
+                POSTCODE_LBL: "@:COMMON.TERMINOLOGY.POSTCODE"
+            },
+            QUICK_PICK: {
+                BLOCK_STAFF_OR_RESOURCE: "Block time for person/resource",
+                BLOCK_TIME_TAB_HEADING: "Block time",
+                BLOCK_WHOLE_DAY: "Block whole day",
+                MAKE_BOOKING_TAB_HEADING: "Make booking",
+                FOR: "For",
+                PERSON_LABEL: "@:COMMON.TERMINOLOGY.PERSON",
+                PERSON_DEFAULT_OPTION: "Any Person",
+                RESOURCE_LABEL: "@:COMMON.TERMINOLOGY.RESOURCE",
+                RESOURCE_DEFAULT_OPTION: "Any Resource",
+                FROM_LBL: "From",
+                SERVICE_LABEL: 'Select a service',
+                SERVICE_DEFAULT_OPTION: "-- select --",
+                SERVICE_REQUIRED_MSG: 'Please select a service',
+                STAFF_RESOURCE_REQUIRED_MSG: "Please select a person/resource",
+                TO_LBL: "To",
+                YES_OPTION: "@:COMMON.BTN.YES",
+                NO_OPTION: "@:COMMON.BTN.NO",
+                NEXT_BTN: "@:COMMON.BTN.NEXT",
+                BLOCK_TIME_BTN: "Block Time",
+                FIELD_REQUIRED: "@:COMMON.FORM.FIELD_REQUIRED",
+                REASON: 'Reason',
+                OTHER_PLACEHOLDER: 'Please specify a reason',
+                PERSON: 'Person'
+            },
+            BOOKINGS_TABLE: {
+                CANCEL_BTN: "@:COMMON.BTN.CANCEL",
+                DETAILS_BTN: "@:COMMON.BTN.DETAILS",
+                DATE_HEADING: "Date/Time",
+                DETAILS_HEADING: "Description",
+                ACTION_HEADING: "Actions"
+            },
+            ADMIN_MOVE_BOOKING: {
+                CANCEL_CONFIRMATION_HEADING: "Your booking has been cancelled.",
+                HEADING: "Your {{service_name}} booking",
+                CUSTOMER_NAME_LBL: "@:COMMON.TERMINOLOGY.NAME",
+                PRINT_BTN: "@:COMMON.TERMINOLOGY.PRINT",
+                EMAIL_LBL: "@:COMMON.TERMINOLOGY.EMAIL",
+                SERVICE_LBL: "@:COMMON.TERMINOLOGY.SERVICE",
+                WHEN_LBL: "@:COMMON.TERMINOLOGY.WHEN",
+                PRICE_LBL: "@:COMMON.TERMINOLOGY.PRICE",
+                CANCEL_BOOKING_BTN: "@:COMMON.BTN.CANCEL_BOOKING",
+                MOVE_BOOKING_BTN: "Move booking",
+                BOOK_WAITLIST_ITEMS_BTN: "Book Waitlist Items"
+            },
+            CHECK_ITEMS: {
+                BOOKINGS_QUESTIONS_HEADING: "Booking Questions",
+                PRIVATE_BOOKING_NOTES_HEADING: "Private Notes",
+                BOOK_BTN: "@:COMMON.BTN.BOOK",
+                BACK_BTN: "@:COMMON.BTN.BACK"
+            },
+            CONFIRMATION: {
+                TITLE: "@:COMMON.TERMINOLOGY.CONFIRMATION",
+                BOOKING_CONFIRMATION: "Booking is now confirmed.",
+                EMAIL_CONFIRMATION: "An email has been sent to {{customer_name}} with the details below.",
+                WAITLIST_CONFIRMATION: "You have successfully made the following bookings.",
+                PRINT_BTN: "@:COMMON.TERMINOLOGY.PRINT",
+                PURCHASE_REF_LBL: "Reference",
+                CUSTOMER_LBL: "@:COMMON.TERMINOLOGY.BOOKING_REF",
+                SERVICE_LBL: "@:COMMON.TERMINOLOGY.SERVICE",
+                DATE_TIME_LBL: "@:COMMON.TERMINOLOGY.DATE_TIME",
+                TIME_LBL: "@:COMMON.TERMINOLOGY.TIME",
+                PRICE_LBL: "@:COMMON.TERMINOLOGY.PRICE",
+                CLOSE_BTN: "@:COMMON.BTN.CLOSE"
+            },
+            MODAL: {
+                CLOSE_BTN: "@:COMMON.BTN.CLOSE"
+            }
+        }
+    };
+
+    $translateProvider.translations("en", translations);
 });
