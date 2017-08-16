@@ -153,7 +153,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 (function () {
     var BlockTimeCtrl = function () {
-        function BlockTimeCtrl($rootScope, BBModel, ReasonService, BlockTimeOptions, GeneralOptions) {
+        function BlockTimeCtrl($rootScope, BBModel, ReasonService, BlockTimeOptions, GeneralOptions, bbTimeZone) {
             _classCallCheck(this, BlockTimeCtrl);
 
             this.$rootScope = $rootScope;
@@ -161,12 +161,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             this.ReasonService = ReasonService;
             this.BlockTimeOptions = BlockTimeOptions;
             this.GeneralOptions = GeneralOptions;
+            this.bbTimeZone = bbTimeZone;
         }
 
         BlockTimeCtrl.prototype.$onInit = function $onInit() {
             var _this = this;
 
             this.setDefaults();
+            this.ensureMinDateAndMaxDateExist();
             this.ReasonService.query(this.$rootScope.bb.company).then(function (reasons) {
                 return _this.getReasonsCallBack(reasons);
             }).catch(function (error) {
@@ -186,6 +188,15 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             this.model.isValidDuration = this.isValidDuration;
         };
 
+        BlockTimeCtrl.prototype.ensureMinDateAndMaxDateExist = function ensureMinDateAndMaxDateExist() {
+            if (!this.model.min_date) {
+                this.model.min_date = this.model.from_datetime.clone().hours(0).minutes(0);
+            }
+            if (!this.model.max_date) {
+                this.model.max_date = this.model.from_datetime.clone().hours(24).minutes(0);
+            }
+        };
+
         BlockTimeCtrl.prototype.convertToMoment = function convertToMoment(date) {
             if (date && !moment.isMoment(date)) date = moment(date);
             return date;
@@ -203,14 +214,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 allday: false,
                 private_note: this.model.private_note
             };
-
-            if (this.model.allDay) {
-                // When a booking is saved as allDay, the API behaves unpredictably.
-                // We can avoid this by just setting allDay bookings manually,
-                // by setting the start and end time to be 00:00 to 24:00
-                params.start_time = params.start_time.clone().hours(0).minutes(0);
-                params.end_time = params.end_time.clone().hours(24).minutes(0);
-            }
 
             if (_typeof(this.model.current_item.person) === 'object') {
                 return this.BBModel.Admin.Person.$block(this.model.company, this.model.current_item.person, params).then(function (response) {
@@ -252,8 +255,24 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 // Not sure about this. Shouldn't need to set _start and _end
                 // but when these are omitted, the application throws when a
                 // block time all day booking is made
-                this.model._start = moment(this.model.start).hours(0).minutes(0);
-                this.model._end = moment(this.model.end).hours(24).minutes(0);
+
+                // When a booking is saved as allDay, the API behaves unpredictably.
+                // We can avoid this by just setting allDay bookings manually,
+                // by setting the start and end time to be 00:00 to 24:00.
+                // For this to work the booking needs to be saved in the CompanyTimeZone
+
+                var momentObj = {
+                    date: this.model.from_datetime.date(),
+                    month: this.model.from_datetime.month(),
+                    year: this.model.from_datetime.year(),
+                    minutes: 0
+                };
+
+                var startTime = this.bbTimeZone.convertToCompany(moment()).set(momentObj).hours(0);
+                var endTime = this.bbTimeZone.convertToCompany(moment()).set(momentObj).hours(24);
+
+                this.model._start = this.model.datetime = this.model.start = this.model.from_datetime = startTime;
+                this.model._end = this.model.end_datetime = this.model.end = this.model.to_datetime = endTime;
             }
 
             if (!isWholeDay) {
@@ -265,7 +284,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this.model.max_date = null;
                 this.model.from_datetime = this.model.min_date.clone();
                 this.model.to_datetime = this.model.min_date.clone().add(calendarSlotDuration, 'minutes');
-                this.model.max_date = maxDate.clone().date(this.model.min_date.date());
+                this.model.max_date = maxDate.clone();
             }
         };
 
@@ -1501,6 +1520,7 @@ angular.module('BB.Services').provider('AdminBookingOptions', function () {
 
                 return $uibModal.open({
                     size: 'lg',
+                    windowClass: 'window-overlay',
                     controller: AdminBookingPopupCtrl,
                     templateUrl: 'admin_booking_popup.html',
                     resolve: {
@@ -1730,6 +1750,12 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 DAY_5_VIEW_BTN: "5 day",
                 DAY_7_VIEW_BTN: "7 day",
                 FIRST_FOUND_VIEW_BTN: "First available",
+                DATE_HEADER: {
+                    DAY_VIEW: "{{selected_date | datetime: 'LL':true}}",
+                    DAY_VIEW_XS: "{{selected_date | datetime: 'll':true}}",
+                    FIRST_FOUND_VIEW: "{{selected_date | datetime: 'LL':true}}",
+                    FIRST_FOUND_VIEW_XS: "{{selected_date | datetime: 'll':true}}"
+                },
                 TIME_SLOT_WITH_COUNTDOWN: "{{datetime | datetime: 'LT':true}} (in {{time | tod_from_now}})",
                 NOT_FOUND: "No availability found",
                 NOT_FOUND_TRY_DIFFERENT_TIME_RANGE: "No availability found, try a different time-range",
