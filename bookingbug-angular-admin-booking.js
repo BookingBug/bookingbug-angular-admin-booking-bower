@@ -147,208 +147,6 @@ var BBAdminResourcesDropdownCtrl = function BBAdminResourcesDropdownCtrl(BBAsset
 angular.module('BBAdminBooking').controller('BBAdminResourcesDropdownCtrl', BBAdminResourcesDropdownCtrl);
 'use strict';
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-(function () {
-    var BlockTimeCtrl = function () {
-        function BlockTimeCtrl($rootScope, BBModel, ReasonService, BlockTimeOptions, GeneralOptions, bbTimeZone) {
-            _classCallCheck(this, BlockTimeCtrl);
-
-            this.$rootScope = $rootScope;
-            this.BBModel = BBModel;
-            this.ReasonService = ReasonService;
-            this.BlockTimeOptions = BlockTimeOptions;
-            this.GeneralOptions = GeneralOptions;
-            this.bbTimeZone = bbTimeZone;
-        }
-
-        BlockTimeCtrl.prototype.$onInit = function $onInit() {
-            var _this = this;
-
-            this.setDefaults();
-            this.ensureMinDateAndMaxDateExist();
-            this.ReasonService.query(this.$rootScope.bb.company).then(function (reasons) {
-                return _this.getReasonsCallBack(reasons);
-            }).catch(function (error) {
-                return console.warn(error);
-            });
-        };
-
-        BlockTimeCtrl.prototype.setDefaults = function setDefaults() {
-            this.blockReasons = [];
-            this.reasonObj = {};
-            this.showReasons = this.BlockTimeOptions.showReasons;
-            this.model.allDay = this.model.allDay ? this.model.allDay : false;
-            this.model.to_datetime = this.convertToMoment(this.model.to_datetime);
-            this.model.from_datetime = this.convertToMoment(this.model.from_datetime);
-            this.model.min_date = this.convertToMoment(this.model.min_date);
-            this.model.max_date = this.convertToMoment(this.model.max_date);
-            this.model.isValidDuration = this.isValidDuration;
-        };
-
-        BlockTimeCtrl.prototype.ensureMinDateAndMaxDateExist = function ensureMinDateAndMaxDateExist() {
-            if (!this.model.min_date) {
-                this.model.min_date = this.model.from_datetime.clone().hours(0).minutes(0);
-            }
-            if (!this.model.max_date) {
-                this.model.max_date = this.model.from_datetime.clone().hours(24).minutes(0);
-            }
-        };
-
-        BlockTimeCtrl.prototype.convertToMoment = function convertToMoment(date) {
-            if (date && !moment.isMoment(date)) date = moment(date);
-            return date;
-        };
-
-        BlockTimeCtrl.prototype.blockTimeSubmit = function blockTimeSubmit() {
-            var _this2 = this;
-
-            this.loading = true;
-
-            var params = {
-                start_time: this.model.from_datetime,
-                end_time: this.model.to_datetime,
-                booking: true,
-                allday: false,
-                private_note: this.model.private_note
-            };
-
-            if (_typeof(this.model.current_item.person) === 'object') {
-                return this.BBModel.Admin.Person.$block(this.model.company, this.model.current_item.person, params).then(function (response) {
-                    return _this2.blockSuccess(response);
-                }).catch(function (error) {
-                    return console.warn(error);
-                });
-            }
-
-            if (_typeof(this.model.current_item.resource) === 'object') {
-                return this.BBModel.Admin.Resource.$block(this.model.company, this.model.current_item.resource, params).then(function (response) {
-                    return _this2.blockSuccess(response);
-                }).catch(function (error) {
-                    return console.warn(error);
-                });
-            }
-        };
-
-        BlockTimeCtrl.prototype.isValidForm = function isValidForm() {
-            if (_typeof(this.model.current_item.person) !== 'object' && _typeof(this.model.current_item.resource) !== 'object') {
-                return false;
-            }
-
-            if (!this.model.from_datetime || !this.model.to_datetime) {
-                return false;
-            }
-
-            return true;
-        };
-
-        BlockTimeCtrl.prototype.blockSuccess = function blockSuccess() {
-            this.$rootScope.$broadcast('refetchBookings', 'closeModal');
-            this.loading = false;
-        };
-
-        BlockTimeCtrl.prototype.onAllDayChanged = function onAllDayChanged(isWholeDay) {
-            if (isWholeDay) {
-                this.model.duration = 1440;
-                // Not sure about this. Shouldn't need to set _start and _end
-                // but when these are omitted, the application throws when a
-                // block time all day booking is made
-
-                // When a booking is saved as allDay, the API behaves unpredictably.
-                // We can avoid this by just setting allDay bookings manually,
-                // by setting the start and end time to be 00:00 to 24:00.
-                // For this to work the booking needs to be saved in the CompanyTimeZone
-
-                var momentObj = {
-                    date: this.model.from_datetime.date(),
-                    month: this.model.from_datetime.month(),
-                    year: this.model.from_datetime.year(),
-                    minutes: 0
-                };
-
-                var startTime = this.bbTimeZone.convertToCompany(moment()).set(momentObj).hours(0);
-                var endTime = this.bbTimeZone.convertToCompany(moment()).set(momentObj).hours(24);
-
-                this.model._start = this.model.datetime = this.model.start = this.model.from_datetime = startTime;
-                this.model._end = this.model.end_datetime = this.model.end = this.model.to_datetime = endTime;
-            }
-
-            if (!isWholeDay) {
-                var calendarSlotDuration = this.GeneralOptions.calendar_slot_duration;
-                var maxDate = this.model.max_date.clone();
-                // Break references so that dateTimePicker gets new values
-                this.model.from_datetime = null;
-                this.model.to_datetime = null;
-                this.model.max_date = null;
-                this.model.from_datetime = this.model.min_date.clone();
-                this.model.to_datetime = this.model.min_date.clone().add(calendarSlotDuration, 'minutes');
-                this.model.max_date = maxDate.clone();
-            }
-        };
-
-        BlockTimeCtrl.prototype.getReasonsCallBack = function getReasonsCallBack(reasons) {
-            var otherReason = { id: reasons.length + 1, text: '', label: 'Other' };
-            this.blockReasons = this.addLabelToReasons(reasons);
-            this.blockReasons.push(otherReason);
-            if (this.editBlockTime) this.setReasonObj(otherReason);
-        };
-
-        BlockTimeCtrl.prototype.addLabelToReasons = function addLabelToReasons(reasons) {
-            return reasons.map(function (reason) {
-                reason.label = reason.text;
-                return reason;
-            });
-        };
-
-        BlockTimeCtrl.prototype.setReasonObj = function setReasonObj(otherReason) {
-            var _this3 = this;
-
-            var findReasonByText = function findReasonByText(text) {
-                return _this3.blockReasons.find(function (item) {
-                    return item.text === text;
-                });
-            };
-            var reason = findReasonByText(this.model.private_note);
-
-            if (reason && reason.text !== '') {
-                this.reasonObj = reason;
-                return;
-            }
-
-            if (this.model.private_note) {
-                otherReason.text = this.model.private_note;
-                this.reasonObj = findReasonByText(otherReason.text);
-                return;
-            }
-        };
-
-        BlockTimeCtrl.prototype.onReasonChanged = function onReasonChanged(reason) {
-            this.model.private_note = reason ? reason.text : '';
-        };
-
-        BlockTimeCtrl.prototype.isValidDuration = function isValidDuration(model) {
-            return Math.abs(model.to_datetime.diff(model.from_datetime, 'minutes')) !== 0;
-        };
-
-        return BlockTimeCtrl;
-    }();
-
-    var bbBlockTime = {
-        bindings: {
-            'model': '<',
-            'editBlockTime': '<'
-        },
-        controller: BlockTimeCtrl,
-        controllerAs: '$bbBlockTime',
-        templateUrl: 'admin-booking/bb_block_time.html'
-    };
-
-    angular.module('BBAdminBooking').component('bbBlockTime', bbBlockTime);
-})();
-'use strict';
-
 angular.module('BB.Directives').directive('bbAdminCalendar', function () {
 
     return {
@@ -1199,7 +997,7 @@ angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', function ($uib
                         merge_resources: AdminBookingOptions.merge_resources,
                         merge_people: AdminBookingOptions.merge_people
                     }, config.item_defaults);
-                    $scope.cancel = function () {
+                    return $scope.cancel = function () {
                         return $uibModalInstance.dismiss('cancel');
                     };
                 },
@@ -1230,123 +1028,121 @@ angular.module('BBAdminBooking').factory('AdminMoveBookingPopup', function ($uib
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-angular.module('BBAdminBooking').directive('bbBlockTime', bbBlockTime);
+var BBBlockTimeCtrl = function BBBlockTimeCtrl($scope, $element, $attrs, BBModel, BookingCollections, $rootScope, BBAssets) {
+    'ngInject';
 
-function bbBlockTime() {
+    // All options (resources, people) go to the same select
+
+    $scope.resources = [];
+    $scope.resourceError = false;
+
+    BBAssets.getAssets($scope.bb.company).then(function (assets) {
+        return $scope.resources = assets;
+    });
+
+    if (!moment.isMoment($scope.bb.to_datetime)) {
+        $scope.bb.to_datetime = moment($scope.bb.to_datetime);
+    }
+
+    if (!moment.isMoment($scope.bb.from_datetime)) {
+        $scope.bb.from_datetime = moment($scope.bb.from_datetime);
+    }
+
+    if (!moment.isMoment($scope.bb.to_datetime)) {
+        $scope.bb.to_datetime = moment($scope.bb.to_datetime);
+    }
+
+    if ($scope.bb.min_date && !moment.isMoment($scope.bb.min_date)) {
+        $scope.bb.min_date = moment($scope.bb.min_date);
+    }
+
+    if ($scope.bb.max_date && !moment.isMoment($scope.bb.max_date)) {
+        $scope.bb.max_date = moment($scope.bb.max_date);
+    }
+
+    $scope.all_day = false;
+
+    $scope.hideBlockAllDay = Math.abs($scope.bb.from_datetime.diff($scope.bb.to_datetime, 'days')) > 0;
+
+    if ($scope.bb.company_settings && $scope.bb.company_settings.$has('block_questions')) {
+        $scope.bb.company_settings.$get("block_questions", {}).then(function (details) {
+            return $scope.block_questions = new BBModel.ItemDetails(details);
+        });
+    }
+
+    $scope.blockTime = function (form) {
+        if (form == null) {
+            console.error('blockTime requires form as first argument');
+            return false;
+        }
+
+        form.$setSubmitted();
+
+        if (form.$invalid || !isValid()) {
+            return false;
+        }
+
+        $scope.loading = true;
+
+        var params = {
+            start_time: $scope.bb.from_datetime,
+            end_time: $scope.bb.to_datetime,
+            booking: true,
+            allday: $scope.all_day
+        };
+
+        if ($scope.block_questions) {
+            params.questions = $scope.block_questions.getPostData();
+        }
+
+        if (_typeof($scope.bb.current_item.person) === 'object') {
+            // Block call
+            return BBModel.Admin.Person.$block($scope.bb.company, $scope.bb.current_item.person, params).then(function (response) {
+                return blockSuccess(response);
+            });
+        } else if (_typeof($scope.bb.current_item.resource) === 'object') {
+            // Block call
+            return BBModel.Admin.Resource.$block($scope.bb.company, $scope.bb.current_item.resource, params).then(function (response) {
+                return blockSuccess(response);
+            });
+        }
+    };
+
+    var isValid = function isValid() {
+        $scope.resourceError = false;
+        if (_typeof($scope.bb.current_item.person) !== 'object' && _typeof($scope.bb.current_item.resource) !== 'object') {
+            $scope.resourceError = true;
+        }
+
+        if (_typeof($scope.bb.current_item.person) !== 'object' && _typeof($scope.bb.current_item.resource) !== 'object' || $scope.bb.from_datetime == null || !$scope.bb.to_datetime) {
+            return false;
+        }
+
+        return true;
+    };
+
+    var blockSuccess = function blockSuccess(response) {
+        $rootScope.$broadcast('refetchBookings');
+        $scope.loading = false;
+        // Close modal window
+        return $scope.cancel();
+    };
+
+    $scope.changeBlockDay = function (blockDay) {
+        return $scope.all_day = blockDay;
+    };
+    //   if blockDay
+    //     $scope.bb.from_datetime = $scope.bb.min_date.format()
+    //     $scope.bb.to_datetime = $scope.bb.max_date.format()
+};
+
+angular.module('BBAdminBooking').directive('bbBlockTime', function () {
     return {
         scope: true,
         restrict: 'A',
         controller: BBBlockTimeCtrl
     };
-
-    function BBBlockTimeCtrl($scope, $element, $attrs, BBModel, $rootScope, BBAssets) {
-        'ngInject';
-
-        // All options (resources, people) go to the same select
-
-        $scope.resources = [];
-        $scope.resourceError = false;
-
-        BBAssets.getAssets($scope.bb.company).then(function (assets) {
-            return $scope.resources = assets;
-        });
-
-        if (!moment.isMoment($scope.bb.to_datetime)) {
-            $scope.bb.to_datetime = moment($scope.bb.to_datetime);
-        }
-
-        if (!moment.isMoment($scope.bb.from_datetime)) {
-            $scope.bb.from_datetime = moment($scope.bb.from_datetime);
-        }
-
-        if (!moment.isMoment($scope.bb.to_datetime)) {
-            $scope.bb.to_datetime = moment($scope.bb.to_datetime);
-        }
-
-        if ($scope.bb.min_date && !moment.isMoment($scope.bb.min_date)) {
-            $scope.bb.min_date = moment($scope.bb.min_date);
-        }
-
-        if ($scope.bb.max_date && !moment.isMoment($scope.bb.max_date)) {
-            $scope.bb.max_date = moment($scope.bb.max_date);
-        }
-
-        $scope.all_day = false;
-
-        $scope.hideBlockAllDay = Math.abs($scope.bb.from_datetime.diff($scope.bb.to_datetime, 'days')) > 0;
-
-        if ($scope.bb.company_settings && $scope.bb.company_settings.$has('block_questions')) {
-            $scope.bb.company_settings.$get("block_questions", {}).then(function (details) {
-                return $scope.block_questions = new BBModel.ItemDetails(details);
-            });
-        }
-
-        $scope.blockTime = function (form) {
-            if (form == null) {
-                console.error('blockTime requires form as first argument');
-                return false;
-            }
-
-            form.$setSubmitted();
-
-            if (form.$invalid || !isValid()) {
-                return false;
-            }
-
-            $scope.loading = true;
-
-            var params = {
-                start_time: $scope.bb.from_datetime,
-                end_time: $scope.bb.to_datetime,
-                booking: true,
-                allday: $scope.all_day
-            };
-
-            if ($scope.block_questions) {
-                params.questions = $scope.block_questions.getPostData();
-            }
-
-            if (_typeof($scope.bb.current_item.person) === 'object') {
-                // Block call
-                return BBModel.Admin.Person.$block($scope.bb.company, $scope.bb.current_item.person, params).then(function (response) {
-                    return blockSuccess(response);
-                });
-            } else if (_typeof($scope.bb.current_item.resource) === 'object') {
-                // Block call
-                return BBModel.Admin.Resource.$block($scope.bb.company, $scope.bb.current_item.resource, params).then(function (response) {
-                    return blockSuccess(response);
-                });
-            }
-        };
-
-        var isValid = function isValid() {
-            $scope.resourceError = false;
-            if (_typeof($scope.bb.current_item.person) !== 'object' && _typeof($scope.bb.current_item.resource) !== 'object') {
-                $scope.resourceError = true;
-            }
-
-            if (_typeof($scope.bb.current_item.person) !== 'object' && _typeof($scope.bb.current_item.resource) !== 'object' || $scope.bb.from_datetime == null || !$scope.bb.to_datetime) {
-                return false;
-            }
-
-            return true;
-        };
-
-        var blockSuccess = function blockSuccess(response) {
-            $rootScope.$broadcast('refetchBookings');
-            $scope.loading = false;
-            // Close modal window
-            return $scope.cancel();
-        };
-
-        $scope.changeBlockDay = function (blockDay) {
-            return $scope.all_day = blockDay;
-        };
-        //   if blockDay
-        //     $scope.bb.from_datetime = $scope.bb.min_date.format()
-        //     $scope.bb.to_datetime = $scope.bb.max_date.format()
-    }
-}
+});
 'use strict';
 
 angular.module('BB.Directives').directive('selectFirstSlot', function () {
@@ -1520,7 +1316,6 @@ angular.module('BB.Services').provider('AdminBookingOptions', function () {
 
                 return $uibModal.open({
                     size: 'lg',
-                    windowClass: 'window-overlay',
                     controller: AdminBookingPopupCtrl,
                     templateUrl: 'admin_booking_popup.html',
                     resolve: {
@@ -1532,20 +1327,16 @@ angular.module('BB.Services').provider('AdminBookingOptions', function () {
             }
         };
 
-        function AdminBookingPopupCtrl($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
+        function AdminBookingPopupCtrl($rootScope, $scope, $uibModalInstance, config, $window, AdminBookingOptions) {
             'ngInject';
 
             var updateModalTitle = function updateModalTitle(event, date) {
                 return $scope.config.title = date.datetime.format('LLLL');
             };
-            var closeModal = function closeModal(event, data) {
-                if (data === 'closeModal') {
-                    $scope.cancel();
-                }
-            };
-
-            $scope.$on('slotChanged:updateModalTitle', updateModalTitle);
-            $scope.$on('refetchBookings', closeModal);
+            var updateModalTitleHandler = $scope.$on('slotChanged:updateModalTitle', updateModalTitle);
+            $scope.$on('$destroy', function () {
+                return updateModalTitleHandler();
+            });
 
             $scope.Math = $window.Math;
 
@@ -1570,7 +1361,7 @@ angular.module('BB.Services').provider('AdminBookingOptions', function () {
             }, config.item_defaults);
 
             $scope.cancel = function () {
-                $uibModalInstance.dismiss('cancel');
+                return $uibModalInstance.dismiss('cancel');
             };
         }
     }
@@ -1750,12 +1541,6 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 DAY_5_VIEW_BTN: "5 day",
                 DAY_7_VIEW_BTN: "7 day",
                 FIRST_FOUND_VIEW_BTN: "First available",
-                DATE_HEADER: {
-                    DAY_VIEW: "{{selected_date | datetime: 'LL':true}}",
-                    DAY_VIEW_XS: "{{selected_date | datetime: 'll':true}}",
-                    FIRST_FOUND_VIEW: "{{selected_date | datetime: 'LL':true}}",
-                    FIRST_FOUND_VIEW_XS: "{{selected_date | datetime: 'll':true}}"
-                },
                 TIME_SLOT_WITH_COUNTDOWN: "{{datetime | datetime: 'LT':true}} (in {{time | tod_from_now}})",
                 NOT_FOUND: "No availability found",
                 NOT_FOUND_TRY_DIFFERENT_TIME_RANGE: "No availability found, try a different time-range",
@@ -1812,9 +1597,8 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 POSTCODE_LBL: "@:COMMON.TERMINOLOGY.POSTCODE"
             },
             QUICK_PICK: {
-                BLOCK_STAFF_OR_RESOURCE: "Block time for person/resource",
-                BLOCK_TIME_TAB_HEADING: "Block time",
                 BLOCK_WHOLE_DAY: "Block whole day",
+                BLOCK_TIME_TAB_HEADING: "Block time",
                 MAKE_BOOKING_TAB_HEADING: "Make booking",
                 FOR: "For",
                 PERSON_LABEL: "@:COMMON.TERMINOLOGY.PERSON",
@@ -1825,16 +1609,12 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 SERVICE_LABEL: 'Select a service',
                 SERVICE_DEFAULT_OPTION: "-- select --",
                 SERVICE_REQUIRED_MSG: 'Please select a service',
-                STAFF_RESOURCE_REQUIRED_MSG: "Please select a person/resource",
                 TO_LBL: "To",
                 YES_OPTION: "@:COMMON.BTN.YES",
                 NO_OPTION: "@:COMMON.BTN.NO",
                 NEXT_BTN: "@:COMMON.BTN.NEXT",
                 BLOCK_TIME_BTN: "Block Time",
-                FIELD_REQUIRED: "@:COMMON.FORM.FIELD_REQUIRED",
-                REASON: 'Reason',
-                OTHER_PLACEHOLDER: 'Please specify a reason',
-                PERSON: 'Person'
+                FIELD_REQUIRED: "@:COMMON.FORM.FIELD_REQUIRED"
             },
             BOOKINGS_TABLE: {
                 CANCEL_BTN: "@:COMMON.BTN.CANCEL",
