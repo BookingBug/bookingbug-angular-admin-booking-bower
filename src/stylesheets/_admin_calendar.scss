@@ -35,93 +35,38 @@
     }
   }
 
-  .panel-group .accordion-group:first-child div.accordion-grouper.panel {
-    border: 0;
-  }
-
-  .panel-group .panel {
-    border: 0;
-  }
-
-  // Offset so calendar and its header will not overlap each other.
-  .bb-calendar {
-    padding-top: 2px;
-  }
-
-  .default-panel-heading-tab-border {
-    border-radius: 0;
-
-    // Every accordion header has top and bottom border and transparent border on the sides (not to push elements).
-    border: 1px solid #ddd;
-    border-right-color: transparent;
-    border-left-color: transparent;
-  }
-
   // Inset focus outline for elements tagged with tab-special class.
   div.panel-heading[role="tab"] {
-    @extend .default-panel-heading-tab-border;
-
-    // Visually merge y-axis borders, but keep them separate for better outline experience.
-    margin-top: -1px;
-
     &:focus {
-      // Override previously defined styles with more specific selector.
+      border: 0;
       box-shadow: none;
-      @extend .default-panel-heading-tab-border;
     }
 
     &.tab-focused {
-      // Focused tab should be visible despite border overlapping.
-      z-index: 1;
-
-      border: 1px solid $input-border-focus;
-      box-shadow: 0 0 5px 1px $input-border-focus;
+      border: 0;
+      border-radius: 0;
+      box-shadow: inset 0 0 1px 1px rgba(102, 175, 233, 1), 0 0 0 0 rgba(102, 175, 233, 0.90);
     }
   }
 
   // Better focus outline for accordion header inner elements.
-  [bb-accordion-range-group] {
-    li.time-slot {
-      border: 1px solid transparent;
-      &:focus {
-        border: 1px solid $input-border-focus;
-        box-shadow: none;
-      }
-
-      // Last time slot should have widened bottom border in order to have it visible.
-      &:last-of-type {
-        border-bottom: 2px solid transparent;
-        &:focus {
-          border-bottom: 2px solid $input-border-focus;
-          box-shadow: none;
-        }
-      }
-    }
-
-    // Last time slot in last accordion group should not have bottom border widened.
-    &:last-of-type {
-      li.time-slot:last-of-type {
-        border-bottom: 1px solid transparent;
-        &:focus {
-          border-bottom: 1px solid $input-border-focus;
-          box-shadow: none;
-        }
-      }
+  div.panel-heading[role="tab"] + div.panel-collapse[role="tabpanel"] {
+    li.time-slot:focus {
+      border: 0;
+      border-radius: 0;
+      box-shadow: inset 0 0 1px 1px rgba(102, 175, 233, 1), 0 0 0 0 rgba(102, 175, 233, 0.90);
     }
   }
 
   // Enhancement of calendar arrow buttons while focused.
   button[type="button"].btn.btn-icon {
-    margin-top: -4px;
     padding: 5px 3px 3px;
 
-    border-radius: 100px;
-    border: 1px solid transparent;
-
     &:focus {
-      border: 1px solid $input-border-focus;
+      border: 0;
       outline: 0;
-      box-shadow: 0 0 2px 1px $input-border-focus;
+      border-radius: 100px;
+      box-shadow: 0 0 3px 1px rgba(102, 175, 233, 1);
     }
   }
 
