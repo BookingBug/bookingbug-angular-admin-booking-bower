@@ -252,6 +252,20 @@
         return $scope.setLoaded($scope);
       });
     };
+    $scope.getClientByRef = function(params) {
+      $scope.notLoaded($scope);
+      return AdminClientService.queryByRef({
+        company: params.company,
+        ref: params.ref
+      }).then(function(client) {
+        var items, total_entries;
+        $scope.search_complete = true;
+        items = [client];
+        total_entries = 1;
+        $scope.clients.initialise(items, total_entries);
+        return $scope.setLoaded($scope);
+      });
+    };
     $scope.searchClients = function(search_text) {
       var defer, params;
       defer = $q.defer();
