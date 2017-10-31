@@ -250,9 +250,19 @@
           $scope.clients.initialise(result.items, result.total_entries);
         }
         return $scope.setLoaded($scope);
+      })["catch"](function(err) {
+        console.log(err);
+        return $scope.setLoaded($scope);
       });
     };
     $scope.getClientByRef = function(params) {
+      $scope.search_triggered = true;
+      $timeout(function() {
+        return $scope.search_triggered = false;
+      }, 1000);
+      if (!params || (params && !params.company) || (params && !params.ref)) {
+        return;
+      }
       $scope.notLoaded($scope);
       return AdminClientService.queryByRef({
         company: params.company,
@@ -263,6 +273,9 @@
         items = [client];
         total_entries = 1;
         $scope.clients.initialise(items, total_entries);
+        return $scope.setLoaded($scope);
+      })["catch"](function(err) {
+        console.log(err);
         return $scope.setLoaded($scope);
       });
     };
