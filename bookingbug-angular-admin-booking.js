@@ -1,10 +1,14 @@
 'use strict';
 
-angular.module('BBAdminBooking', ['BB', 'BBAdmin.Services', 'BBAdminServices', 'trNgGrid']);
+angular.module('BBAdminBooking', ['BB', 'BBAdmin.Services', 'BBAdminServices', 'BBAdminBooking.Components', 'BBAdminBooking.Filters', 'trNgGrid']);
+
+angular.module('BBAdminBooking.Components', []);
 
 angular.module('BBAdminBooking.Directives', []);
 
 angular.module('BBAdminBooking.Services', ['ngResource', 'ngSanitize']);
+
+angular.module('BBAdminBooking.Filters', []);
 
 angular.module('BBAdminBooking.Controllers', ['ngLocalData', 'ngSanitize']);
 'use strict';
@@ -349,6 +353,67 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 })();
 'use strict';
 
+/**
+ * @ngdoc component
+ * @name bbNextAvailableView
+ *
+ * @requires slotsInTheFuture, AdminCalendarOptions
+ *
+ * @param slots List of all slots in given day.
+ * @param date Current date used to render a header.
+ * @param selectSlot Function to be called when slot is chosen.
+ *
+ * @description
+ * Renders a simple list of closest available time slots that can be chosen by a user.
+ * First available slot is chosen automatically.
+ */
+angular.module('BBAdminBooking.Components').component('bbNextAvailableView', {
+    bindings: {
+        slots: '<',
+        date: '<',
+        selectSlot: '<'
+    },
+    templateUrl: 'admin-booking/bb_next_available_view.html',
+    controller: NextAvailableViewController
+});
+
+function NextAvailableViewController($filter, AdminCalendarOptions) {
+
+    var $ctrl = this;
+
+    $ctrl.$onInit = function () {
+        if ($ctrl.slots) {
+            calculateSlots();
+        }
+    };
+
+    /**
+     * Slot list can be initialised after slots are indeed present in parent scope or changed at any time.
+     */
+    $ctrl.$onChanges = function (changes) {
+        if (changes.hasOwnProperty('slots') && !changes.slots.previousValue) {
+            calculateSlots();
+        }
+    };
+
+    function calculateSlots() {
+        $ctrl.showedSlots = $filter('limitTo')($filter('slotsInTheFuture')($ctrl.slots), AdminCalendarOptions.view.nextAvailable.limitTo);
+
+        // Is somehow any of the present slots is selected do nothing more.
+        if ($ctrl.slots.find(function (slot) {
+            return slot.selected;
+        })) {
+            return;
+        }
+
+        // Select the first available time slot if nothing is selected.
+        if ($ctrl.showedSlots[0]) {
+            $ctrl.selectSlot($ctrl.showedSlots[0]);
+        }
+    }
+}
+'use strict';
+
 angular.module('BB.Directives').directive('bbAdminCalendar', function () {
 
     return {
@@ -394,10 +459,6 @@ var BBAdminCalendarCtrl = function BBAdminCalendarCtrl($scope, $element, $contro
             return $scope.resource_name = $scope.bb.current_item.resource.name;
         }
     };
-
-    $scope.$on('slotChanged', function (event, date) {
-        $scope.$emit('slotChanged:updateModalTitle', date);
-    });
 
     $scope.switchView = function (view) {
 
@@ -1349,6 +1410,15 @@ function bbBlockTime() {
 }
 'use strict';
 
+/**
+ * @deprecated
+ * Directive has no sense on its own. As an attribute it is scope dependant. It calculates future time slots, which is
+ * redundant in the place where it was used (select_next_available_view). Hiding slots adds additional calculations and
+ * makes this directive non-configurable. It could chose slot without knowledge of the user if controller was to be
+ * instantiated again.
+ *
+ * Use bb-next-available-view component instead if you want simple slot list where first available slot is selected.
+ */
 angular.module('BB.Directives').directive('selectFirstSlot', function () {
     return {
         link: function link(scope, el, attrs) {
@@ -1407,6 +1477,10 @@ angular.module('BB.Directives').directive('selectFirstSlot', function () {
 });
 'use strict';
 
+/**
+ * @deprecated
+ * This filter is using buggy way of comparing time. Use inTheFuture filter instead.
+ */
 angular.module('BB.Filters').filter('in_the_future', function () {
     return function (slots) {
 
@@ -1462,6 +1536,18 @@ angular.module('BB.Filters').filter('tod_from_now', function () {
 });
 'use strict';
 
+angular.module('BBAdminBooking.Filters').filter('slotsInTheFuture', function () {
+    return function () {
+        var slots = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+
+        var now = moment();
+        return slots.filter(function (slot) {
+            return slot.datetime.isAfter(now);
+        });
+    };
+});
+'use strict';
+
 /**
  * @ngdoc service
  * @module BB.Services
@@ -1509,72 +1595,63 @@ angular.module('BB.Services').provider('AdminBookingOptions', function () {
 });
 'use strict';
 
-(function () {
+angular.module('BBAdminBooking').service('AdminBookingPopup', AdminBookingPopup);
 
-    angular.module('BBAdminBooking').factory('AdminBookingPopup', adminBookingPopup);
-
-    function adminBookingPopup($uibModal) {
-
-        return {
-            open: function open(_config) {
-
-                return $uibModal.open({
-                    size: 'lg',
-                    windowClass: 'window-overlay',
-                    controller: AdminBookingPopupCtrl,
-                    templateUrl: 'admin_booking_popup.html',
-                    resolve: {
-                        config: function config() {
-                            return _config;
-                        }
-                    }
-                });
-            }
-        };
-
-        function AdminBookingPopupCtrl($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
-            'ngInject';
-
-            var updateModalTitle = function updateModalTitle(event, date) {
-                return $scope.config.title = date.datetime.format('LLLL');
-            };
-            var closeModal = function closeModal(event, data) {
-                if (data === 'closeModal') {
-                    $scope.cancel();
-                }
-            };
-
-            $scope.$on('slotChanged:updateModalTitle', updateModalTitle);
-            $scope.$on('refetchBookings', closeModal);
-
-            $scope.Math = $window.Math;
-
-            if ($scope.bb && $scope.bb.current_item) {
-                delete $scope.bb.current_item;
-            }
-
-            $scope.config = angular.extend({
-                clear_member: true,
-                template: 'main'
-            }, config);
-
-            if ($scope.company) {
-                if (!$scope.config.company_id) {
-                    $scope.config.company_id = $scope.company.id;
+function AdminBookingPopup($uibModal) {
+    this.open = function (_config) {
+        return $uibModal.open({
+            size: 'lg',
+            windowClass: 'window-overlay',
+            controller: AdminBookingPopupCtrl,
+            templateUrl: 'admin_booking_popup.html',
+            resolve: {
+                config: function config() {
+                    return _config;
                 }
             }
+        });
+    };
+}
 
-            $scope.config.item_defaults = angular.extend({
-                merge_resources: AdminBookingOptions.merge_resources,
-                merge_people: AdminBookingOptions.merge_people
-            }, config.item_defaults);
+function AdminBookingPopupCtrl($scope, $uibModalInstance, config, $window, AdminBookingOptions) {
+    'ngInject';
 
-            $scope.cancel = function () {
-                $uibModalInstance.dismiss('cancel');
-            };
+    $scope.$on('slotChanged', function slotChangedHandler(event, day, slot) {
+        $scope.config.title = slot.datetime.format('LLLL');
+    });
+
+    $scope.$on('refetchBookings', function refetchBookingsHandler(event, data) {
+        if (data === 'closeModal') {
+            $scope.cancel();
+        }
+    });
+
+    $scope.Math = $window.Math;
+
+    if ($scope.bb && $scope.bb.current_item) {
+        delete $scope.bb.current_item;
+    }
+
+    $scope.config = angular.extend({
+        clear_member: true,
+        template: 'main'
+    }, config);
+
+    if ($scope.company) {
+        if (!$scope.config.company_id) {
+            $scope.config.company_id = $scope.company.id;
         }
     }
-})();
+
+    $scope.config.item_defaults = angular.extend({
+        merge_resources: AdminBookingOptions.merge_resources,
+        merge_people: AdminBookingOptions.merge_people
+    }, config.item_defaults);
+
+    $scope.cancel = function () {
+        $uibModalInstance.dismiss('cancel');
+    };
+}
 'use strict';
 
 /**
@@ -1782,7 +1859,8 @@ angular.module("BBAdminBooking").config(function ($translateProvider) {
                 FIND_ANOTHER_TIME_BTN: "Find another time",
                 MORNING_HEADER: "@:COMMON.TERMINOLOGY.MORNING",
                 AFTERNOON_HEADER: "@:COMMON.TERMINOLOGY.AFTERNOON",
-                EVENING_HEADER: "@:COMMON.TERMINOLOGY.EVENING"
+                EVENING_HEADER: "@:COMMON.TERMINOLOGY.EVENING",
+                TIME_SLOT_SELECTED: "Time slot selected"
             },
             CUSTOMER: {
                 CUSTOMER: "Customer",
