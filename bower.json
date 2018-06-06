@@ -1,6 +1,6 @@
 {
   "name": "bookingbug-angular-admin-booking",
-  "version": "1.4.141",
+  "version": "1.4.49",
   "homepage": "https://github.com/BookingBug/bookingbug-angular-admin-booking-bower",
   "authors": [
     "Glenn Shoosmith <glenn@bookingbug.com>",
@@ -20,14 +20,14 @@
     "tests"
   ],
   "dependencies": {
-    "bookingbug-angular-core": "1.4.141",
-    "bookingbug-angular-admin": "1.4.141",
-    "bookingbug-angular-services": "1.4.141"
+    "bookingbug-angular-core": "1.4.49",
+    "bookingbug-angular-admin": "1.4.49",
+    "bookingbug-angular-services": "1.4.49"
   },
   "resolutions": {
     "angular": "1.2.28",
-    "bookingbug-angular-core": "1.4.141",
-    "bookingbug-angular-admin": "1.4.141",
+    "bookingbug-angular-core": "1.4.49",
+    "bookingbug-angular-admin": "1.4.49",
     "fullcalendar": "~2.4.0",
     "jquery": "~1.11.2",
     "moment": "~2.13.0"
