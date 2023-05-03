@@ -80,6 +80,12 @@
       return $scope.initialise();
     });
     $scope.initialise = function() {
+      $scope.initDate();
+      if ($scope.bb.item_defaults.pick_first_time || ($scope.bb.current_item.defaults.time != null) || ($scope.bb.item_defaults.day_view && $scope.bb.item_defaults.day_view !== 'multi_day')) {
+        $scope.loadDay();
+      } else {
+        $scope.setLoaded($scope);
+      }
       if ($scope.bb.item_defaults.pick_first_time) {
         $scope.switchView('next_available');
       } else if ($scope.bb.current_item.defaults.time != null) {
@@ -97,6 +103,7 @@
     $scope.switchView = function(view) {
       var i, key, len, ref, ref1, slot, value;
       if (view === "day") {
+        $scope.loadDay();
         if ($scope.slots && $scope.bb.current_item.time) {
           ref = $scope.slots;
           for (i = 0, len = ref.length; i < len; i++) {
@@ -195,6 +202,7 @@
         if ($scope.client_details) {
           $scope.client.setClientDetails($scope.client_details);
         }
+        $scope.client.default_company_id = $scope.bb.company.id;
         return ClientService.create_or_update($scope.bb.company, $scope.client).then(function(client) {
           $scope.setLoaded($scope);
           return $scope.selectClient(client, route);
@@ -242,6 +250,33 @@
         } else {
           $scope.clients.initialise(result.items, result.total_entries);
         }
+        return $scope.setLoaded($scope);
+      })["catch"](function(err) {
+        console.log(err);
+        return $scope.setLoaded($scope);
+      });
+    };
+    $scope.getClientByRef = function(params) {
+      $scope.search_triggered = true;
+      $timeout(function() {
+        return $scope.search_triggered = false;
+      }, 1000);
+      if (!params || (params && !params.company) || (params && !params.ref)) {
+        return;
+      }
+      $scope.notLoaded($scope);
+      return AdminClientService.queryByRef({
+        company: params.company,
+        ref: params.ref
+      }).then(function(client) {
+        var items, total_entries;
+        $scope.search_complete = true;
+        items = [client];
+        total_entries = 1;
+        $scope.clients.initialise(items, total_entries);
+        return $scope.setLoaded($scope);
+      })["catch"](function(err) {
+        console.log(err);
         return $scope.setLoaded($scope);
       });
     };
